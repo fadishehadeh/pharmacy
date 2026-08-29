@@ -16,6 +16,8 @@ $menuItems = [
         ['label' => 'Print Labels', 'url' => BASE_URL . '/modules/inventory/labels.php'],
         ['label' => 'Smart Reorder', 'url' => BASE_URL . '/modules/inventory/reorder.php'],
         ['label' => 'Export Inventory', 'url' => BASE_URL . '/modules/inventory/export.php'],
+        ['label' => 'Price History', 'url' => BASE_URL . '/modules/inventory/price_history.php'],
+        ['label' => 'Reorder Levels', 'url' => BASE_URL . '/modules/inventory/reorder_levels.php'],
     ]],
     ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => BASE_URL . '/modules/pos/index.php', 'dir' => 'pos'],
     ['icon' => 'bi-file-medical', 'label' => 'Prescriptions', 'url' => '#', 'dir' => 'prescriptions', 'children' => [
@@ -32,6 +34,7 @@ $menuItems = [
         ['label' => 'All Suppliers', 'url' => BASE_URL . '/modules/suppliers/index.php'],
         ['label' => 'Purchase Orders', 'url' => BASE_URL . '/modules/suppliers/orders.php'],
         ['label' => 'Performance', 'url' => BASE_URL . '/modules/suppliers/performance.php'],
+        ['label' => 'Returns', 'url' => BASE_URL . '/modules/suppliers/returns.php'],
     ]],
     ['icon' => 'bi-cash-stack', 'label' => 'Finance', 'url' => '#', 'dir' => 'finance', 'children' => [
         ['label' => 'Overview', 'url' => BASE_URL . '/modules/finance/index.php'],
@@ -39,6 +42,7 @@ $menuItems = [
         ['label' => 'Expenses', 'url' => BASE_URL . '/modules/finance/expenses.php'],
         ['label' => 'Profit & Loss', 'url' => BASE_URL . '/modules/finance/profit_loss.php'],
         ['label' => 'Taxes', 'url' => BASE_URL . '/modules/finance/taxes.php'],
+        ['label' => 'Customer Credits', 'url' => BASE_URL . '/modules/finance/credits.php'],
     ]],
     ['icon' => 'bi-building', 'label' => 'MoPH', 'url' => '#', 'dir' => 'moph', 'children' => [
         ['label' => 'Price List', 'url' => BASE_URL . '/modules/moph/price_list.php'],
@@ -63,12 +67,14 @@ $menuItems = [
         ['label' => 'Inventory Valuation', 'url' => BASE_URL . '/modules/reports/inventory_valuation.php'],
         ['label' => 'ABC Analysis', 'url' => BASE_URL . '/modules/reports/abc_analysis.php'],
         ['label' => 'Expiry Forecast', 'url' => BASE_URL . '/modules/reports/expiry_forecast.php'],
+        ['label' => 'Margin Analysis', 'url' => BASE_URL . '/modules/reports/margin_analysis.php'],
     ]],
     ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => BASE_URL . '/modules/notifications/index.php', 'dir' => 'notifications'],
     ['icon' => 'bi-gear', 'label' => 'Settings', 'url' => '#', 'dir' => 'settings', 'children' => [
         ['label' => 'General', 'url' => BASE_URL . '/modules/settings/index.php'],
         ['label' => 'User Activity', 'url' => BASE_URL . '/modules/settings/activity.php'],
         ['label' => 'Database Backup', 'url' => BASE_URL . '/modules/settings/backup.php'],
+        ['label' => 'Shift Management', 'url' => BASE_URL . '/modules/settings/shifts.php'],
     ]],
 ];
 ?>

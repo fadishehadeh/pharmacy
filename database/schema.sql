@@ -752,3 +752,74 @@ INSERT INTO drug_interactions (drug_a, drug_b, severity, description, recommenda
 ('Fluconazole', 'Warfarin', 'major', 'Fluconazole significantly increases warfarin anticoagulant effect', 'Reduce warfarin dose and monitor INR frequently.'),
 ('Carbamazepine', 'Oral Contraceptives', 'major', 'Carbamazepine reduces contraceptive efficacy', 'Recommend additional or alternative contraception.'),
 ('Metronidazole', 'Alcohol', 'major', 'Disulfiram-like reaction: nausea, vomiting, flushing, tachycardia', 'Avoid alcohol during and 48h after treatment.');
+
+-- ============================================================
+-- PHASE 10: SUPPLIER RETURNS, CREDITS, PRICE TRACKING, SHIFTS
+-- ============================================================
+
+CREATE TABLE supplier_returns (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    supplier_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    reason ENUM('expired','damaged','recalled','wrong_item','quality_issue') NOT NULL,
+    batch_number VARCHAR(50),
+    cost_value DECIMAL(12,2) DEFAULT 0,
+    refund_amount DECIMAL(12,2) DEFAULT 0,
+    status ENUM('pending','approved','refunded','rejected') DEFAULT 'pending',
+    notes TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    INDEX idx_supplier (supplier_id),
+    INDEX idx_status (status)
+);
+
+CREATE TABLE customer_credits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    type ENUM('credit','payment') NOT NULL,
+    sale_id INT,
+    notes TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    INDEX idx_customer (customer_id),
+    INDEX idx_type (type)
+);
+
+CREATE TABLE price_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id INT NOT NULL,
+    field_name ENUM('cost_price','sell_price') NOT NULL,
+    old_value DECIMAL(10,2),
+    new_value DECIMAL(10,2),
+    changed_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES users(id),
+    INDEX idx_medicine (medicine_id),
+    INDEX idx_date (created_at)
+);
+
+CREATE TABLE employee_shifts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    shift_date DATE NOT NULL,
+    shift_type ENUM('morning','afternoon','night','custom') NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    notes TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    INDEX idx_user_date (user_id, shift_date),
+    INDEX idx_shift_date (shift_date)
+);
