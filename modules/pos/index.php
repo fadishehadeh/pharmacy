@@ -21,6 +21,9 @@ $vatRate = getSetting('vat_rate', 11);
                     </div>
                 </div>
                 <div class="col-auto">
+                    <button type="button" class="btn btn-outline-primary" id="btnPosScanner" title="Scan barcode with camera"><i class="bi bi-upc-scan"></i></button>
+                </div>
+                <div class="col-auto">
                     <select class="form-select" id="posCategoryFilter">
                         <option value="">All Categories</option>
                         <?php foreach ($categories as $cat): ?>
@@ -28,6 +31,11 @@ $vatRate = getSetting('vat_rate', 11);
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+            <div id="posScannerContainer" class="d-none mt-2 position-relative" style="max-width:350px">
+                <video id="posScannerVideo" style="width:100%;border-radius:8px"></video>
+                <div style="position:absolute;top:50%;left:10%;right:10%;height:2px;background:red;opacity:0.7"></div>
+                <button type="button" class="btn btn-sm btn-danger mt-1" id="btnPosStopScanner">Stop</button>
             </div>
         </div>
         <div class="pos-products" id="posProducts" style="max-height:calc(100vh - 220px);overflow-y:auto">
@@ -115,11 +123,13 @@ $vatRate = getSetting('vat_rate', 11);
 </div>
 
 <?php
+$baseUrl = BASE_URL;
 $extraScripts = <<<SCRIPT
 <script>
 var cart = [];
 var exchangeRate = {$exchangeRate};
 var products = [];
+var BASE_URL = '{$baseUrl}';
 
 function loadProducts(search, category) {
     search = search || '';
@@ -136,6 +146,7 @@ function renderProducts() {
         var outClass = p.quantity_in_stock <= 0 ? 'out-of-stock' : '';
         var stockBadge = p.quantity_in_stock <= 0 ? 'bg-danger' : (p.quantity_in_stock <= p.min_stock_level ? 'bg-warning' : 'bg-success');
         html += '<div class="col-6 col-xl-4"><div class="card pos-product-card p-2 ' + outClass + '" onclick="addToCart(' + p.id + ')">';
+        if (p.image) html += '<img src="' + BASE_URL + '/assets/uploads/' + p.image + '" style="height:40px;width:40px;object-fit:cover;border-radius:4px;float:right;margin-left:4px">';
         html += '<strong class="small">' + escHtml(p.name) + '</strong>';
         if (p.strength) html += '<small class="text-muted">' + escHtml(p.strength) + '</small>';
         html += '<div class="d-flex justify-content-between mt-1">';
@@ -284,6 +295,70 @@ $('#posCategoryFilter').on('change', function() {
 });
 
 loadProducts();
+
+// POS Barcode Scanner
+var posScannerStream = null;
+$('#btnPosScanner').on('click', function() {
+    var container = $('#posScannerContainer');
+    var video = document.getElementById('posScannerVideo');
+    if (!container.hasClass('d-none')) { stopPosScanner(); return; }
+    container.removeClass('d-none');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            posScannerStream = stream;
+            video.srcObject = stream;
+            video.play();
+            if (typeof BarcodeDetector !== 'undefined') {
+                var detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a'] });
+                var iv = setInterval(function() {
+                    if (!posScannerStream) { clearInterval(iv); return; }
+                    detector.detect(video).then(function(b) {
+                        if (b.length > 0) { clearInterval(iv); onPosBarcodeFound(b[0].rawValue); }
+                    }).catch(function(){});
+                }, 300);
+            }
+        })
+        .catch(function() { alert('Camera access denied'); stopPosScanner(); });
+});
+
+$('#btnPosStopScanner').on('click', stopPosScanner);
+
+function stopPosScanner() {
+    if (posScannerStream) { posScannerStream.getTracks().forEach(function(t){t.stop();}); posScannerStream = null; }
+    $('#posScannerContainer').addClass('d-none');
+}
+
+function onPosBarcodeFound(code) {
+    stopPosScanner();
+    $('#posSearch').val(code);
+    loadProducts(code, $('#posCategoryFilter').val());
+    setTimeout(function() {
+        if (products.length === 1) addToCart(products[0].id);
+    }, 500);
+}
+
+// Keyboard barcode scanner support
+var barcodeBuffer = '';
+var barcodeTimer = null;
+$(document).on('keypress', function(e) {
+    if ($('input:focus, textarea:focus, select:focus').length > 0 && !$('#posSearch').is(':focus')) return;
+    if (e.key === 'Enter' && barcodeBuffer.length >= 6) {
+        e.preventDefault();
+        $('#posSearch').val(barcodeBuffer);
+        loadProducts(barcodeBuffer, '');
+        setTimeout(function() {
+            if (products.length === 1) addToCart(products[0].id);
+        }, 500);
+        barcodeBuffer = '';
+        return;
+    }
+    if (/[\d]/.test(e.key)) {
+        barcodeBuffer += e.key;
+        clearTimeout(barcodeTimer);
+        barcodeTimer = setTimeout(function() { barcodeBuffer = ''; }, 100);
+    }
+});
 </script>
 SCRIPT;
 
@@ -298,7 +373,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'products') {
         $params = array_merge($params, ["%$search%", "%$search%", "%$search%"]);
     }
     if ($category) { $where[] = 'category_id = ?'; $params[] = $category; }
-    $sql = "SELECT id, name, strength, form, sell_price, cost_price, quantity_in_stock, min_stock_level, barcode, is_subsidized, subsidy_percentage FROM medicines WHERE " . implode(' AND ', $where) . " ORDER BY name LIMIT 100";
+    $sql = "SELECT id, name, strength, form, sell_price, cost_price, quantity_in_stock, min_stock_level, barcode, is_subsidized, subsidy_percentage, image FROM medicines WHERE " . implode(' AND ', $where) . " ORDER BY name LIMIT 100";
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     echo json_encode($stmt->fetchAll());

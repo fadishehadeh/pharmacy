@@ -58,6 +58,7 @@ $auditLogs = $db->query("SELECT al.*, u.username FROM audit_log al LEFT JOIN use
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#users">Users</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#receipt">Receipt</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#audit">Audit Log</a></li>
+    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/modules/settings/backup.php">Database Backup</a></li>
 </ul>
 
 <div class="tab-content">

@@ -6,6 +6,7 @@ RewriteBase /pharmacy/
 RewriteRule ^config/ - [F,L]
 RewriteRule ^includes/ - [F,L]
 RewriteRule ^database/ - [F,L]
+RewriteRule ^backups/ - [F,L]
 
 # Allow direct access to assets
 RewriteRule ^assets/ - [L]

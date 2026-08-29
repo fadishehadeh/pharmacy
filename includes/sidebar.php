@@ -4,12 +4,20 @@ $menuItems = [
     ['icon' => 'bi-box-seam', 'label' => 'Inventory', 'url' => '#', 'dir' => 'inventory', 'children' => [
         ['label' => 'All Medicines', 'url' => BASE_URL . '/modules/inventory/index.php'],
         ['label' => 'Add Medicine', 'url' => BASE_URL . '/modules/inventory/add.php'],
+        ['label' => 'Batch Tracking', 'url' => BASE_URL . '/modules/inventory/batches.php'],
         ['label' => 'Categories', 'url' => BASE_URL . '/modules/inventory/categories.php'],
         ['label' => 'Shelves & Cabinets', 'url' => BASE_URL . '/modules/inventory/shelves.php'],
         ['label' => 'Expiry Alerts', 'url' => BASE_URL . '/modules/inventory/alerts.php'],
         ['label' => 'Stock Movements', 'url' => BASE_URL . '/modules/inventory/movements.php'],
+        ['label' => 'Stock Count', 'url' => BASE_URL . '/modules/inventory/stock_count.php'],
+        ['label' => 'Print Labels', 'url' => BASE_URL . '/modules/inventory/labels.php'],
+        ['label' => 'Smart Reorder', 'url' => BASE_URL . '/modules/inventory/reorder.php'],
+        ['label' => 'Export Inventory', 'url' => BASE_URL . '/modules/inventory/export.php'],
     ]],
     ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => BASE_URL . '/modules/pos/index.php', 'dir' => 'pos'],
+    ['icon' => 'bi-file-medical', 'label' => 'Prescriptions', 'url' => '#', 'dir' => 'prescriptions', 'children' => [
+        ['label' => 'All Prescriptions', 'url' => BASE_URL . '/modules/prescriptions/index.php'],
+    ]],
     ['icon' => 'bi-receipt', 'label' => 'Sales', 'url' => '#', 'dir' => 'sales', 'children' => [
         ['label' => 'Sales History', 'url' => BASE_URL . '/modules/sales/index.php'],
         ['label' => 'Returns', 'url' => BASE_URL . '/modules/sales/returns.php'],
@@ -18,6 +26,7 @@ $menuItems = [
     ['icon' => 'bi-truck', 'label' => 'Suppliers', 'url' => '#', 'dir' => 'suppliers', 'children' => [
         ['label' => 'All Suppliers', 'url' => BASE_URL . '/modules/suppliers/index.php'],
         ['label' => 'Purchase Orders', 'url' => BASE_URL . '/modules/suppliers/orders.php'],
+        ['label' => 'Performance', 'url' => BASE_URL . '/modules/suppliers/performance.php'],
     ]],
     ['icon' => 'bi-cash-stack', 'label' => 'Finance', 'url' => '#', 'dir' => 'finance', 'children' => [
         ['label' => 'Overview', 'url' => BASE_URL . '/modules/finance/index.php'],
@@ -34,7 +43,18 @@ $menuItems = [
         ['label' => 'Providers', 'url' => BASE_URL . '/modules/insurance/providers.php'],
         ['label' => 'Claims', 'url' => BASE_URL . '/modules/insurance/claims.php'],
     ]],
-    ['icon' => 'bi-people', 'label' => 'Customers', 'url' => BASE_URL . '/modules/pos/customers.php', 'dir' => 'customers'],
+    ['icon' => 'bi-person-heart', 'label' => 'Patients', 'url' => '#', 'dir' => 'patients', 'children' => [
+        ['label' => 'Patient Profiles', 'url' => BASE_URL . '/modules/patients/index.php'],
+        ['label' => 'Customers', 'url' => BASE_URL . '/modules/pos/customers.php'],
+        ['label' => 'Loyalty Program', 'url' => BASE_URL . '/modules/pos/loyalty.php'],
+    ]],
+    ['icon' => 'bi-shield-exclamation', 'label' => 'Drug Interactions', 'url' => BASE_URL . '/modules/interactions/index.php', 'dir' => 'interactions'],
+    ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'Reports', 'url' => '#', 'dir' => 'reports', 'children' => [
+        ['label' => 'Daily Report', 'url' => BASE_URL . '/modules/reports/daily.php'],
+        ['label' => 'Monthly Report', 'url' => BASE_URL . '/modules/reports/monthly.php'],
+        ['label' => 'Inventory Valuation', 'url' => BASE_URL . '/modules/reports/inventory_valuation.php'],
+    ]],
+    ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => BASE_URL . '/modules/notifications/index.php', 'dir' => 'notifications'],
     ['icon' => 'bi-gear', 'label' => 'Settings', 'url' => BASE_URL . '/modules/settings/index.php', 'dir' => 'settings'],
 ];
 ?>

@@ -62,6 +62,7 @@ CREATE TABLE medicines (
     expiry_date DATE,
     batch_number VARCHAR(50),
     storage_conditions VARCHAR(100),
+    image VARCHAR(255),
     notes TEXT,
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -432,3 +433,166 @@ INSERT INTO suppliers (name, contact_person, phone) VALUES
 ('Droguerie de l''Union', '', ''),
 ('Fattal Group', '', ''),
 ('Mersaco', '', '');
+
+-- ============================================================
+-- PHASE 6: DRUG INTERACTIONS & PATIENT MANAGEMENT
+-- ============================================================
+
+CREATE TABLE drug_interactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    drug_a VARCHAR(200) NOT NULL,
+    drug_b VARCHAR(200) NOT NULL,
+    severity ENUM('minor','moderate','major','contraindicated') NOT NULL,
+    description TEXT NOT NULL,
+    recommendation TEXT,
+    INDEX idx_drug_a (drug_a),
+    INDEX idx_drug_b (drug_b)
+);
+
+CREATE TABLE patient_profiles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    date_of_birth DATE,
+    gender ENUM('male','female','other'),
+    blood_type VARCHAR(5),
+    allergies TEXT,
+    chronic_conditions TEXT,
+    emergency_contact VARCHAR(150),
+    emergency_phone VARCHAR(20),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
+CREATE TABLE patient_medications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    medicine_id INT,
+    medicine_name VARCHAR(200) NOT NULL,
+    dosage VARCHAR(100),
+    frequency VARCHAR(100),
+    start_date DATE,
+    end_date DATE,
+    prescribing_doctor VARCHAR(100),
+    is_active TINYINT(1) DEFAULT 1,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patient_profiles(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE SET NULL
+);
+
+CREATE TABLE refill_reminders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    last_dispensed DATE,
+    estimated_runout DATE,
+    days_supply INT,
+    is_notified TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patient_profiles(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+);
+
+-- ============================================================
+-- PHASE 7: PRESCRIPTIONS, BATCHES, NOTIFICATIONS
+-- ============================================================
+
+CREATE TABLE prescriptions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rx_number VARCHAR(30) UNIQUE NOT NULL,
+    patient_id INT,
+    customer_id INT,
+    doctor_name VARCHAR(150) NOT NULL,
+    doctor_license VARCHAR(50),
+    doctor_phone VARCHAR(20),
+    diagnosis TEXT,
+    issue_date DATE NOT NULL,
+    expiry_date DATE,
+    notes TEXT,
+    status ENUM('active','partial','dispensed','expired','cancelled') DEFAULT 'active',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patient_profiles(id) ON DELETE SET NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    INDEX idx_rx_number (rx_number),
+    INDEX idx_status (status),
+    INDEX idx_doctor (doctor_name)
+);
+
+CREATE TABLE prescription_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    prescription_id INT NOT NULL,
+    medicine_id INT,
+    dosage VARCHAR(100),
+    frequency VARCHAR(100),
+    duration VARCHAR(100),
+    quantity_prescribed INT DEFAULT 0,
+    quantity_dispensed INT DEFAULT 0,
+    instructions TEXT,
+    FOREIGN KEY (prescription_id) REFERENCES prescriptions(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE SET NULL
+);
+
+CREATE TABLE medicine_batches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id INT NOT NULL,
+    batch_number VARCHAR(50) NOT NULL,
+    expiry_date DATE,
+    quantity INT DEFAULT 0,
+    cost_price DECIMAL(10,2) DEFAULT 0,
+    supplier_id INT,
+    received_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
+    INDEX idx_medicine_batch (medicine_id, batch_number),
+    INDEX idx_expiry (expiry_date)
+);
+
+CREATE TABLE stock_counts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id INT NOT NULL,
+    system_quantity INT NOT NULL,
+    counted_quantity INT NOT NULL,
+    difference INT NOT NULL,
+    counted_by INT,
+    count_date DATETIME NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    INDEX idx_count_date (count_date)
+);
+
+CREATE TABLE loyalty_points (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    points INT NOT NULL,
+    type ENUM('earned','redeemed','adjusted','expired') DEFAULT 'earned',
+    description VARCHAR(255),
+    sale_id INT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL
+);
+
+INSERT INTO drug_interactions (drug_a, drug_b, severity, description, recommendation) VALUES
+('Warfarin', 'Aspirin', 'major', 'Increased risk of bleeding when warfarin is combined with aspirin', 'Monitor INR closely. Consider alternative antiplatelet if possible.'),
+('Warfarin', 'Ibuprofen', 'major', 'NSAIDs increase anticoagulant effect and GI bleeding risk', 'Avoid combination. Use acetaminophen for pain relief instead.'),
+('ACE Inhibitors', 'Potassium Supplements', 'major', 'Risk of hyperkalemia (dangerously high potassium levels)', 'Monitor serum potassium levels regularly.'),
+('Metformin', 'Alcohol', 'major', 'Increased risk of lactic acidosis', 'Advise patient to limit alcohol consumption.'),
+('Simvastatin', 'Erythromycin', 'major', 'Increased risk of rhabdomyolysis (muscle breakdown)', 'Use alternative antibiotic or statin.'),
+('Ciprofloxacin', 'Antacids', 'moderate', 'Antacids reduce absorption of ciprofloxacin', 'Take ciprofloxacin 2 hours before or 6 hours after antacids.'),
+('Methotrexate', 'NSAIDs', 'major', 'NSAIDs reduce renal clearance of methotrexate, increasing toxicity', 'Avoid combination. Monitor methotrexate levels if unavoidable.'),
+('Digoxin', 'Amiodarone', 'major', 'Amiodarone increases digoxin levels significantly', 'Reduce digoxin dose by 50% and monitor levels.'),
+('SSRIs', 'MAOIs', 'contraindicated', 'Risk of serotonin syndrome - potentially fatal', 'Never combine. Allow 14-day washout between drugs.'),
+('Lithium', 'NSAIDs', 'major', 'NSAIDs reduce lithium clearance, causing toxicity', 'Monitor lithium levels. Use acetaminophen instead.'),
+('Clopidogrel', 'Omeprazole', 'moderate', 'Omeprazole reduces the antiplatelet effect of clopidogrel', 'Use pantoprazole or H2 blocker instead.'),
+('Amlodipine', 'Simvastatin', 'moderate', 'Amlodipine increases simvastatin levels, risk of myopathy', 'Limit simvastatin to 20mg/day with amlodipine.'),
+('Fluconazole', 'Warfarin', 'major', 'Fluconazole significantly increases warfarin anticoagulant effect', 'Reduce warfarin dose and monitor INR frequently.'),
+('Carbamazepine', 'Oral Contraceptives', 'major', 'Carbamazepine reduces contraceptive efficacy', 'Recommend additional or alternative contraception.'),
+('Metronidazole', 'Alcohol', 'major', 'Disulfiram-like reaction: nausea, vomiting, flushing, tachycardia', 'Avoid alcohol during and 48h after treatment.');

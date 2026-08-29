@@ -222,6 +222,22 @@ $movements = $movements->fetchAll();
     </div>
 
     <div class="col-lg-4">
+        <?php if (!empty($med['image'])): ?>
+        <div class="card p-3 mb-3 text-center">
+            <img src="<?= BASE_URL ?>/assets/uploads/<?= sanitize($med['image']) ?>" class="img-fluid rounded mb-2" style="max-height:200px">
+            <small class="text-muted">Product Photo</small>
+        </div>
+        <?php endif; ?>
+
+        <div class="card p-3 mb-3">
+            <h6><i class="bi bi-camera me-2"></i>Product Photo</h6>
+            <form method="POST" action="<?= BASE_URL ?>/api/barcode.php?action=upload_image" enctype="multipart/form-data" id="photoUploadForm">
+                <input type="hidden" name="medicine_id" value="<?= $med['id'] ?>">
+                <input type="file" class="form-control form-control-sm mb-2" name="image" accept="image/*">
+                <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-upload me-1"></i>Upload Photo</button>
+            </form>
+        </div>
+
         <div class="card p-3 mb-3">
             <h6><i class="bi bi-box me-2"></i>Stock: <?= $med['quantity_in_stock'] ?> <?= sanitize($med['unit']) ?></h6>
             <div class="progress mb-3" style="height:8px">
