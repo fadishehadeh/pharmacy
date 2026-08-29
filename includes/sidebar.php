@@ -18,8 +18,12 @@ $menuItems = [
         ['label' => 'Export Inventory', 'url' => BASE_URL . '/modules/inventory/export.php'],
         ['label' => 'Price History', 'url' => BASE_URL . '/modules/inventory/price_history.php'],
         ['label' => 'Reorder Levels', 'url' => BASE_URL . '/modules/inventory/reorder_levels.php'],
+        ['label' => 'Import Medicines', 'url' => BASE_URL . '/modules/inventory/import.php'],
     ]],
-    ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => BASE_URL . '/modules/pos/index.php', 'dir' => 'pos'],
+    ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => '#', 'dir' => 'pos', 'children' => [
+        ['label' => 'New Sale', 'url' => BASE_URL . '/modules/pos/index.php'],
+        ['label' => 'Receipt Templates', 'url' => BASE_URL . '/modules/pos/receipt_templates.php'],
+    ]],
     ['icon' => 'bi-file-medical', 'label' => 'Prescriptions', 'url' => '#', 'dir' => 'prescriptions', 'children' => [
         ['label' => 'All Prescriptions', 'url' => BASE_URL . '/modules/prescriptions/index.php'],
     ]],
@@ -59,6 +63,7 @@ $menuItems = [
         ['label' => 'Customers', 'url' => BASE_URL . '/modules/pos/customers.php'],
         ['label' => 'Refill Reminders', 'url' => BASE_URL . '/modules/patients/reminders.php'],
         ['label' => 'Loyalty Program', 'url' => BASE_URL . '/modules/pos/loyalty.php'],
+        ['label' => 'Medical History', 'url' => BASE_URL . '/modules/patients/medical_history.php'],
     ]],
     ['icon' => 'bi-shield-exclamation', 'label' => 'Drug Interactions', 'url' => BASE_URL . '/modules/interactions/index.php', 'dir' => 'interactions'],
     ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'Reports', 'url' => '#', 'dir' => 'reports', 'children' => [
@@ -68,8 +73,14 @@ $menuItems = [
         ['label' => 'ABC Analysis', 'url' => BASE_URL . '/modules/reports/abc_analysis.php'],
         ['label' => 'Expiry Forecast', 'url' => BASE_URL . '/modules/reports/expiry_forecast.php'],
         ['label' => 'Margin Analysis', 'url' => BASE_URL . '/modules/reports/margin_analysis.php'],
+        ['label' => 'Sales Analytics', 'url' => BASE_URL . '/modules/reports/sales_analytics.php'],
+        ['label' => 'Customer Analytics', 'url' => BASE_URL . '/modules/reports/customer_analytics.php'],
+        ['label' => 'Supplier Analytics', 'url' => BASE_URL . '/modules/reports/supplier_analytics.php'],
     ]],
-    ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => BASE_URL . '/modules/notifications/index.php', 'dir' => 'notifications'],
+    ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => '#', 'dir' => 'notifications', 'children' => [
+        ['label' => 'Alert Dashboard', 'url' => BASE_URL . '/modules/notifications/index.php'],
+        ['label' => 'Notification Center', 'url' => BASE_URL . '/modules/notifications/center.php'],
+    ]],
     ['icon' => 'bi-gear', 'label' => 'Settings', 'url' => '#', 'dir' => 'settings', 'children' => [
         ['label' => 'General', 'url' => BASE_URL . '/modules/settings/index.php'],
         ['label' => 'User Activity', 'url' => BASE_URL . '/modules/settings/activity.php'],
