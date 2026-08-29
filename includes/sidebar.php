@@ -21,6 +21,8 @@ $menuItems = [
         ['label' => 'Import Medicines', 'url' => BASE_URL . '/modules/inventory/import.php'],
         ['label' => 'Barcode Generator', 'url' => BASE_URL . '/modules/inventory/barcode_generator.php'],
         ['label' => 'Stocktake', 'url' => BASE_URL . '/modules/inventory/stocktake.php'],
+        ['label' => 'Near-Expiry Deals', 'url' => BASE_URL . '/modules/inventory/near_expiry_deals.php'],
+        ['label' => 'Expiry Calendar', 'url' => BASE_URL . '/modules/inventory/expiry_calendar.php'],
     ]],
     ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => '#', 'dir' => 'pos', 'children' => [
         ['label' => 'New Sale', 'url' => BASE_URL . '/modules/pos/index.php'],
@@ -42,6 +44,7 @@ $menuItems = [
         ['label' => 'Purchase Orders', 'url' => BASE_URL . '/modules/suppliers/orders.php'],
         ['label' => 'Performance', 'url' => BASE_URL . '/modules/suppliers/performance.php'],
         ['label' => 'Returns', 'url' => BASE_URL . '/modules/suppliers/returns.php'],
+        ['label' => 'Product Catalog', 'url' => BASE_URL . '/modules/suppliers/catalog.php'],
     ]],
     ['icon' => 'bi-cash-stack', 'label' => 'Finance', 'url' => '#', 'dir' => 'finance', 'children' => [
         ['label' => 'Overview', 'url' => BASE_URL . '/modules/finance/index.php'],
@@ -70,6 +73,7 @@ $menuItems = [
         ['label' => 'Refill Reminders', 'url' => BASE_URL . '/modules/patients/reminders.php'],
         ['label' => 'Loyalty Program', 'url' => BASE_URL . '/modules/pos/loyalty.php'],
         ['label' => 'Medical History', 'url' => BASE_URL . '/modules/patients/medical_history.php'],
+        ['label' => 'Vaccinations', 'url' => BASE_URL . '/modules/patients/vaccination.php'],
     ]],
     ['icon' => 'bi-shield-exclamation', 'label' => 'Drug Interactions', 'url' => BASE_URL . '/modules/interactions/index.php', 'dir' => 'interactions'],
     ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'Reports', 'url' => '#', 'dir' => 'reports', 'children' => [
@@ -83,6 +87,8 @@ $menuItems = [
         ['label' => 'Customer Analytics', 'url' => BASE_URL . '/modules/reports/customer_analytics.php'],
         ['label' => 'Supplier Analytics', 'url' => BASE_URL . '/modules/reports/supplier_analytics.php'],
         ['label' => 'Inventory Movement', 'url' => BASE_URL . '/modules/reports/inventory_movement.php'],
+        ['label' => 'Waste Report', 'url' => BASE_URL . '/modules/reports/waste_report.php'],
+        ['label' => 'Tax Report', 'url' => BASE_URL . '/modules/reports/tax_report.php'],
     ]],
     ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => '#', 'dir' => 'notifications', 'children' => [
         ['label' => 'Alert Dashboard', 'url' => BASE_URL . '/modules/notifications/index.php'],
@@ -93,6 +99,7 @@ $menuItems = [
         ['label' => 'User Activity', 'url' => BASE_URL . '/modules/settings/activity.php'],
         ['label' => 'Database Backup', 'url' => BASE_URL . '/modules/settings/backup.php'],
         ['label' => 'Shift Management', 'url' => BASE_URL . '/modules/settings/shifts.php'],
+        ['label' => 'Pharmacy Profile', 'url' => BASE_URL . '/modules/settings/pharmacy_profile.php'],
     ]],
 ];
 ?>
