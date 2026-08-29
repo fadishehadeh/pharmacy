@@ -19,10 +19,13 @@ $menuItems = [
         ['label' => 'Price History', 'url' => BASE_URL . '/modules/inventory/price_history.php'],
         ['label' => 'Reorder Levels', 'url' => BASE_URL . '/modules/inventory/reorder_levels.php'],
         ['label' => 'Import Medicines', 'url' => BASE_URL . '/modules/inventory/import.php'],
+        ['label' => 'Barcode Generator', 'url' => BASE_URL . '/modules/inventory/barcode_generator.php'],
+        ['label' => 'Stocktake', 'url' => BASE_URL . '/modules/inventory/stocktake.php'],
     ]],
     ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => '#', 'dir' => 'pos', 'children' => [
         ['label' => 'New Sale', 'url' => BASE_URL . '/modules/pos/index.php'],
         ['label' => 'Receipt Templates', 'url' => BASE_URL . '/modules/pos/receipt_templates.php'],
+        ['label' => 'Process Return', 'url' => BASE_URL . '/modules/pos/returns.php'],
     ]],
     ['icon' => 'bi-file-medical', 'label' => 'Prescriptions', 'url' => '#', 'dir' => 'prescriptions', 'children' => [
         ['label' => 'All Prescriptions', 'url' => BASE_URL . '/modules/prescriptions/index.php'],
@@ -47,16 +50,19 @@ $menuItems = [
         ['label' => 'Profit & Loss', 'url' => BASE_URL . '/modules/finance/profit_loss.php'],
         ['label' => 'Taxes', 'url' => BASE_URL . '/modules/finance/taxes.php'],
         ['label' => 'Customer Credits', 'url' => BASE_URL . '/modules/finance/credits.php'],
+        ['label' => 'Daily Summary', 'url' => BASE_URL . '/modules/finance/daily_summary.php'],
     ]],
     ['icon' => 'bi-building', 'label' => 'MoPH', 'url' => '#', 'dir' => 'moph', 'children' => [
         ['label' => 'Price List', 'url' => BASE_URL . '/modules/moph/price_list.php'],
         ['label' => 'Import Price List', 'url' => BASE_URL . '/modules/moph/import.php'],
         ['label' => 'Controlled Substances', 'url' => BASE_URL . '/modules/moph/controlled.php'],
         ['label' => 'Subsidy Tracking', 'url' => BASE_URL . '/modules/moph/subsidy.php'],
+        ['label' => 'Compliance', 'url' => BASE_URL . '/modules/moph/compliance.php'],
     ]],
     ['icon' => 'bi-shield-plus', 'label' => 'Insurance', 'url' => '#', 'dir' => 'insurance', 'children' => [
         ['label' => 'Providers', 'url' => BASE_URL . '/modules/insurance/providers.php'],
         ['label' => 'Claims', 'url' => BASE_URL . '/modules/insurance/claims.php'],
+        ['label' => 'Reconciliation', 'url' => BASE_URL . '/modules/insurance/reconciliation.php'],
     ]],
     ['icon' => 'bi-person-heart', 'label' => 'Patients', 'url' => '#', 'dir' => 'patients', 'children' => [
         ['label' => 'Patient Profiles', 'url' => BASE_URL . '/modules/patients/index.php'],
@@ -76,6 +82,7 @@ $menuItems = [
         ['label' => 'Sales Analytics', 'url' => BASE_URL . '/modules/reports/sales_analytics.php'],
         ['label' => 'Customer Analytics', 'url' => BASE_URL . '/modules/reports/customer_analytics.php'],
         ['label' => 'Supplier Analytics', 'url' => BASE_URL . '/modules/reports/supplier_analytics.php'],
+        ['label' => 'Inventory Movement', 'url' => BASE_URL . '/modules/reports/inventory_movement.php'],
     ]],
     ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => '#', 'dir' => 'notifications', 'children' => [
         ['label' => 'Alert Dashboard', 'url' => BASE_URL . '/modules/notifications/index.php'],
