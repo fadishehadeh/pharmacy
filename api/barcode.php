@@ -181,6 +181,19 @@ if ($action === 'patient_interactions') {
     exit;
 }
 
+if ($action === 'alternatives') {
+    $medId = intval($_GET['medicine_id'] ?? 0);
+    if (!$medId) { echo json_encode(['alternatives' => []]); exit; }
+    $alts = $db->prepare("SELECT m.id, m.name, m.generic_name, m.sell_price, m.quantity_in_stock, m.manufacturer, alt.type
+        FROM medicine_alternatives alt
+        JOIN medicines m ON (m.id = CASE WHEN alt.medicine_a_id = ? THEN alt.medicine_b_id ELSE alt.medicine_a_id END)
+        WHERE (alt.medicine_a_id = ? OR alt.medicine_b_id = ?) AND m.is_active = 1 AND m.quantity_in_stock > 0
+        ORDER BY m.sell_price ASC");
+    $alts->execute([$medId, $medId, $medId]);
+    echo json_encode(['alternatives' => $alts->fetchAll(PDO::FETCH_ASSOC)]);
+    exit;
+}
+
 if ($action === 'dashboard_stats') {
     $stats = [];
     $stats['total_medicines'] = $db->query("SELECT COUNT(*) FROM medicines WHERE is_active = 1")->fetchColumn();

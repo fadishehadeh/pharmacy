@@ -580,6 +580,139 @@ CREATE TABLE loyalty_points (
     FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL
 );
 
+-- ============================================================
+-- PHASE 8: ADVANCED FEATURES
+-- ============================================================
+
+CREATE TABLE medicine_alternatives (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_a_id INT NOT NULL,
+    medicine_b_id INT NOT NULL,
+    type ENUM('generic','therapeutic','biosimilar') DEFAULT 'generic',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_a_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_b_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_pair (medicine_a_id, medicine_b_id)
+);
+
+CREATE TABLE waste_disposal (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    reason ENUM('expired','damaged','recalled','contaminated','other') NOT NULL,
+    disposal_method ENUM('return_supplier','incineration','chemical_treatment','landfill','moph_collection') NOT NULL,
+    batch_number VARCHAR(50),
+    expiry_date DATE,
+    cost_value DECIMAL(12,2) DEFAULT 0,
+    witness_name VARCHAR(100),
+    witness_license VARCHAR(50),
+    notes TEXT,
+    disposed_by INT,
+    disposal_date DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id),
+    FOREIGN KEY (disposed_by) REFERENCES users(id),
+    INDEX idx_disposal_date (disposal_date)
+);
+
+CREATE TABLE cash_register (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    opening_amount DECIMAL(12,2) DEFAULT 0,
+    opening_lbp DECIMAL(14,2) DEFAULT 0,
+    closing_amount DECIMAL(12,2),
+    closing_lbp DECIMAL(14,2),
+    expected_amount DECIMAL(12,2),
+    expected_lbp DECIMAL(14,2),
+    difference_amount DECIMAL(12,2),
+    difference_lbp DECIMAL(14,2),
+    denominations_usd JSON,
+    denominations_lbp JSON,
+    opened_by INT,
+    closed_by INT,
+    opened_at DATETIME NOT NULL,
+    closed_at DATETIME,
+    status ENUM('open','closed') DEFAULT 'open',
+    notes TEXT,
+    FOREIGN KEY (opened_by) REFERENCES users(id),
+    FOREIGN KEY (closed_by) REFERENCES users(id)
+);
+
+CREATE TABLE quotations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    quote_number VARCHAR(30) UNIQUE NOT NULL,
+    customer_id INT,
+    subtotal DECIMAL(12,2) DEFAULT 0,
+    discount DECIMAL(12,2) DEFAULT 0,
+    total DECIMAL(12,2) DEFAULT 0,
+    valid_until DATE,
+    notes TEXT,
+    status ENUM('active','converted','expired','cancelled') DEFAULT 'active',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE quotation_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    quotation_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_price DECIMAL(12,2) NOT NULL,
+    FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+);
+
+CREATE TABLE deliveries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sale_id INT,
+    customer_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20),
+    address TEXT NOT NULL,
+    delivery_date DATE NOT NULL,
+    time_slot VARCHAR(20),
+    driver_name VARCHAR(100),
+    notes TEXT,
+    status ENUM('pending','confirmed','in_transit','delivered','cancelled') DEFAULT 'pending',
+    delivered_at DATETIME,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    INDEX idx_delivery_date (delivery_date),
+    INDEX idx_status (status)
+);
+
+CREATE TABLE login_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    login_time DATETIME NOT NULL,
+    logout_time DATETIME,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    status ENUM('success','failed') DEFAULT 'success',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_login_time (login_time),
+    INDEX idx_user (user_id)
+);
+
+CREATE TABLE medicine_reminders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    reminder_date DATE NOT NULL,
+    message TEXT,
+    phone VARCHAR(20),
+    status ENUM('pending','sent','cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    INDEX idx_reminder_date (reminder_date)
+);
+
 INSERT INTO drug_interactions (drug_a, drug_b, severity, description, recommendation) VALUES
 ('Warfarin', 'Aspirin', 'major', 'Increased risk of bleeding when warfarin is combined with aspirin', 'Monitor INR closely. Consider alternative antiplatelet if possible.'),
 ('Warfarin', 'Ibuprofen', 'major', 'NSAIDs increase anticoagulant effect and GI bleeding risk', 'Avoid combination. Use acetaminophen for pain relief instead.'),

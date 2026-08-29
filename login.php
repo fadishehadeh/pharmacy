@@ -20,9 +20,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user'] = $user;
         $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
+        try {
+            $db->prepare("INSERT INTO login_log (user_id, login_time, ip_address, user_agent, status) VALUES (?,NOW(),?,?,?)")
+                ->execute([$user['id'], $_SERVER['REMOTE_ADDR'] ?? '', $_SERVER['HTTP_USER_AGENT'] ?? '', 'success']);
+            $_SESSION['login_log_id'] = $db->lastInsertId();
+        } catch (Exception $e) {}
         header('Location: ' . BASE_URL . '/index.php');
         exit;
     } else {
+        if ($user) {
+            try {
+                $db->prepare("INSERT INTO login_log (user_id, login_time, ip_address, user_agent, status) VALUES (?,NOW(),?,?,?)")
+                    ->execute([$user['id'], $_SERVER['REMOTE_ADDR'] ?? '', $_SERVER['HTTP_USER_AGENT'] ?? '', 'failed']);
+            } catch (Exception $e) {}
+        }
         $error = 'Invalid username or password';
     }
 }

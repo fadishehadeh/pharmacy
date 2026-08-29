@@ -38,6 +38,13 @@ $pendingOrders = $db->query("SELECT COUNT(*) FROM purchase_orders WHERE status I
 
 $todayProfit = $db->query("SELECT COALESCE(SUM(si.total_price - (si.cost_price * si.quantity)), 0) FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE DATE(s.sale_date) = CURDATE() AND s.status = 'completed'")->fetchColumn();
 
+$pendingDeliveries = 0;
+$dueReminders = 0;
+$activeQuotes = 0;
+try { $pendingDeliveries = $db->query("SELECT COUNT(*) FROM deliveries WHERE status IN ('pending','confirmed','in_transit') AND delivery_date <= CURDATE()")->fetchColumn(); } catch (Exception $e) {}
+try { $dueReminders = $db->query("SELECT COUNT(*) FROM medicine_reminders WHERE status = 'pending' AND reminder_date <= CURDATE()")->fetchColumn(); } catch (Exception $e) {}
+try { $activeQuotes = $db->query("SELECT COUNT(*) FROM quotations WHERE status = 'active'")->fetchColumn(); } catch (Exception $e) {}
+
 $recentSales = $db->query("SELECT s.*, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.id ORDER BY s.sale_date DESC LIMIT 10")->fetchAll();
 $expiringMeds = $db->query("SELECT m.*, c.name as category_name FROM medicines m LEFT JOIN categories c ON m.category_id = c.id WHERE m.expiry_date IS NOT NULL AND m.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND m.expiry_date >= CURDATE() AND m.is_active = 1 ORDER BY m.expiry_date ASC LIMIT 10")->fetchAll();
 $lowStockMeds = $db->query("SELECT m.*, c.name as category_name FROM medicines m LEFT JOIN categories c ON m.category_id = c.id WHERE m.is_active = 1 AND m.quantity_in_stock <= m.min_stock_level ORDER BY m.quantity_in_stock ASC LIMIT 10")->fetchAll();
@@ -160,6 +167,9 @@ $salesByPayment = $db->query("SELECT payment_method, COUNT(*) as cnt, SUM(total_
                 <a href="<?= BASE_URL ?>/modules/interactions/index.php" class="btn btn-outline-danger"><i class="bi bi-shield-exclamation me-1"></i>Drug Interactions</a>
                 <a href="<?= BASE_URL ?>/modules/prescriptions/index.php" class="btn btn-outline-success"><i class="bi bi-file-medical me-1"></i>Prescriptions</a>
                 <a href="<?= BASE_URL ?>/modules/reports/daily.php" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph me-1"></i>Daily Report</a>
+                <a href="<?= BASE_URL ?>/modules/sales/quotations.php" class="btn btn-outline-dark"><i class="bi bi-file-text me-1"></i>Quotations<?php if ($activeQuotes): ?> <span class="badge bg-primary"><?= $activeQuotes ?></span><?php endif; ?></a>
+                <a href="<?= BASE_URL ?>/modules/sales/deliveries.php" class="btn btn-outline-info"><i class="bi bi-truck me-1"></i>Deliveries<?php if ($pendingDeliveries): ?> <span class="badge bg-warning"><?= $pendingDeliveries ?></span><?php endif; ?></a>
+                <a href="<?= BASE_URL ?>/modules/finance/cash_register.php" class="btn btn-outline-secondary"><i class="bi bi-cash-coin me-1"></i>Cash Register</a>
                 <a href="<?= BASE_URL ?>/modules/notifications/index.php" class="btn btn-outline-dark position-relative"><i class="bi bi-bell me-1"></i>Alerts
                     <?php if ($needReorder + $expiringCount + $expiredCount > 0): ?>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?= $needReorder + $expiringCount + $expiredCount ?></span>
@@ -295,6 +305,8 @@ $salesByPayment = $db->query("SELECT payment_method, COUNT(*) as cnt, SUM(total_
             <div class="d-flex justify-content-between mb-1"><span class="small">Yesterday's Sales</span><strong class="small"><?= formatCurrency($yesterdaySales) ?></strong></div>
             <div class="d-flex justify-content-between mb-1"><span class="small">Pending PO</span><strong class="small"><?= $pendingOrders ?></strong></div>
             <div class="d-flex justify-content-between mb-1"><span class="small">Insurance Claims</span><strong class="small"><?= $pendingClaims ?></strong></div>
+            <div class="d-flex justify-content-between mb-1"><span class="small">Pending Deliveries</span><strong class="small"><?= $pendingDeliveries ?></strong></div>
+            <div class="d-flex justify-content-between mb-1"><span class="small">Refill Reminders Due</span><strong class="small text-<?= $dueReminders > 0 ? 'warning' : 'muted' ?>"><?= $dueReminders ?></strong></div>
             <div class="d-flex justify-content-between"><span class="small">Drug Interactions DB</span><strong class="small"><?= $interactionCount ?></strong></div>
         </div>
     </div>

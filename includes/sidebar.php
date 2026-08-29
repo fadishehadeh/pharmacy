@@ -7,9 +7,11 @@ $menuItems = [
         ['label' => 'Batch Tracking', 'url' => BASE_URL . '/modules/inventory/batches.php'],
         ['label' => 'Categories', 'url' => BASE_URL . '/modules/inventory/categories.php'],
         ['label' => 'Shelves & Cabinets', 'url' => BASE_URL . '/modules/inventory/shelves.php'],
+        ['label' => 'Alternatives', 'url' => BASE_URL . '/modules/inventory/alternatives.php'],
         ['label' => 'Expiry Alerts', 'url' => BASE_URL . '/modules/inventory/alerts.php'],
         ['label' => 'Stock Movements', 'url' => BASE_URL . '/modules/inventory/movements.php'],
         ['label' => 'Stock Count', 'url' => BASE_URL . '/modules/inventory/stock_count.php'],
+        ['label' => 'Waste & Disposal', 'url' => BASE_URL . '/modules/inventory/disposal.php'],
         ['label' => 'Print Labels', 'url' => BASE_URL . '/modules/inventory/labels.php'],
         ['label' => 'Smart Reorder', 'url' => BASE_URL . '/modules/inventory/reorder.php'],
         ['label' => 'Export Inventory', 'url' => BASE_URL . '/modules/inventory/export.php'],
@@ -21,6 +23,8 @@ $menuItems = [
     ['icon' => 'bi-receipt', 'label' => 'Sales', 'url' => '#', 'dir' => 'sales', 'children' => [
         ['label' => 'Sales History', 'url' => BASE_URL . '/modules/sales/index.php'],
         ['label' => 'Returns', 'url' => BASE_URL . '/modules/sales/returns.php'],
+        ['label' => 'Quotations', 'url' => BASE_URL . '/modules/sales/quotations.php'],
+        ['label' => 'Deliveries', 'url' => BASE_URL . '/modules/sales/deliveries.php'],
         ['label' => 'Reports', 'url' => BASE_URL . '/modules/sales/reports.php'],
     ]],
     ['icon' => 'bi-truck', 'label' => 'Suppliers', 'url' => '#', 'dir' => 'suppliers', 'children' => [
@@ -30,12 +34,14 @@ $menuItems = [
     ]],
     ['icon' => 'bi-cash-stack', 'label' => 'Finance', 'url' => '#', 'dir' => 'finance', 'children' => [
         ['label' => 'Overview', 'url' => BASE_URL . '/modules/finance/index.php'],
+        ['label' => 'Cash Register', 'url' => BASE_URL . '/modules/finance/cash_register.php'],
         ['label' => 'Expenses', 'url' => BASE_URL . '/modules/finance/expenses.php'],
         ['label' => 'Profit & Loss', 'url' => BASE_URL . '/modules/finance/profit_loss.php'],
         ['label' => 'Taxes', 'url' => BASE_URL . '/modules/finance/taxes.php'],
     ]],
     ['icon' => 'bi-building', 'label' => 'MoPH', 'url' => '#', 'dir' => 'moph', 'children' => [
         ['label' => 'Price List', 'url' => BASE_URL . '/modules/moph/price_list.php'],
+        ['label' => 'Import Price List', 'url' => BASE_URL . '/modules/moph/import.php'],
         ['label' => 'Controlled Substances', 'url' => BASE_URL . '/modules/moph/controlled.php'],
         ['label' => 'Subsidy Tracking', 'url' => BASE_URL . '/modules/moph/subsidy.php'],
     ]],
@@ -46,6 +52,7 @@ $menuItems = [
     ['icon' => 'bi-person-heart', 'label' => 'Patients', 'url' => '#', 'dir' => 'patients', 'children' => [
         ['label' => 'Patient Profiles', 'url' => BASE_URL . '/modules/patients/index.php'],
         ['label' => 'Customers', 'url' => BASE_URL . '/modules/pos/customers.php'],
+        ['label' => 'Refill Reminders', 'url' => BASE_URL . '/modules/patients/reminders.php'],
         ['label' => 'Loyalty Program', 'url' => BASE_URL . '/modules/pos/loyalty.php'],
     ]],
     ['icon' => 'bi-shield-exclamation', 'label' => 'Drug Interactions', 'url' => BASE_URL . '/modules/interactions/index.php', 'dir' => 'interactions'],
@@ -55,7 +62,11 @@ $menuItems = [
         ['label' => 'Inventory Valuation', 'url' => BASE_URL . '/modules/reports/inventory_valuation.php'],
     ]],
     ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => BASE_URL . '/modules/notifications/index.php', 'dir' => 'notifications'],
-    ['icon' => 'bi-gear', 'label' => 'Settings', 'url' => BASE_URL . '/modules/settings/index.php', 'dir' => 'settings'],
+    ['icon' => 'bi-gear', 'label' => 'Settings', 'url' => '#', 'dir' => 'settings', 'children' => [
+        ['label' => 'General', 'url' => BASE_URL . '/modules/settings/index.php'],
+        ['label' => 'User Activity', 'url' => BASE_URL . '/modules/settings/activity.php'],
+        ['label' => 'Database Backup', 'url' => BASE_URL . '/modules/settings/backup.php'],
+    ]],
 ];
 ?>
 <div class="sidebar bg-dark text-white" id="sidebar">
