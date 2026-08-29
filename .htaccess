@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /pharmacy/
+
+# Redirect to login if not authenticated (handled by PHP)
+# Protect sensitive directories
+RewriteRule ^config/ - [F,L]
+RewriteRule ^includes/ - [F,L]
+RewriteRule ^database/ - [F,L]
+
+# Allow direct access to assets
+RewriteRule ^assets/ - [L]
