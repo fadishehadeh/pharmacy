@@ -713,6 +713,29 @@ CREATE TABLE medicine_reminders (
     INDEX idx_reminder_date (reminder_date)
 );
 
+-- ============================================================
+-- PHASE 9: TRANSFERS, ANALYTICS & FORECASTING
+-- ============================================================
+
+CREATE TABLE stock_transfers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    medicine_id INT NOT NULL,
+    quantity INT NOT NULL,
+    from_shelf_id INT,
+    to_shelf_id INT,
+    reason ENUM('reorganization','space_optimization','temperature','accessibility','other') DEFAULT 'reorganization',
+    notes TEXT,
+    transferred_by INT,
+    transfer_date DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_shelf_id) REFERENCES shelves(id) ON DELETE SET NULL,
+    FOREIGN KEY (to_shelf_id) REFERENCES shelves(id) ON DELETE SET NULL,
+    FOREIGN KEY (transferred_by) REFERENCES users(id),
+    INDEX idx_transfer_date (transfer_date),
+    INDEX idx_medicine (medicine_id)
+);
+
 INSERT INTO drug_interactions (drug_a, drug_b, severity, description, recommendation) VALUES
 ('Warfarin', 'Aspirin', 'major', 'Increased risk of bleeding when warfarin is combined with aspirin', 'Monitor INR closely. Consider alternative antiplatelet if possible.'),
 ('Warfarin', 'Ibuprofen', 'major', 'NSAIDs increase anticoagulant effect and GI bleeding risk', 'Avoid combination. Use acetaminophen for pain relief instead.'),

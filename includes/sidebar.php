@@ -11,6 +11,7 @@ $menuItems = [
         ['label' => 'Expiry Alerts', 'url' => BASE_URL . '/modules/inventory/alerts.php'],
         ['label' => 'Stock Movements', 'url' => BASE_URL . '/modules/inventory/movements.php'],
         ['label' => 'Stock Count', 'url' => BASE_URL . '/modules/inventory/stock_count.php'],
+        ['label' => 'Stock Transfers', 'url' => BASE_URL . '/modules/inventory/transfer.php'],
         ['label' => 'Waste & Disposal', 'url' => BASE_URL . '/modules/inventory/disposal.php'],
         ['label' => 'Print Labels', 'url' => BASE_URL . '/modules/inventory/labels.php'],
         ['label' => 'Smart Reorder', 'url' => BASE_URL . '/modules/inventory/reorder.php'],
@@ -60,6 +61,8 @@ $menuItems = [
         ['label' => 'Daily Report', 'url' => BASE_URL . '/modules/reports/daily.php'],
         ['label' => 'Monthly Report', 'url' => BASE_URL . '/modules/reports/monthly.php'],
         ['label' => 'Inventory Valuation', 'url' => BASE_URL . '/modules/reports/inventory_valuation.php'],
+        ['label' => 'ABC Analysis', 'url' => BASE_URL . '/modules/reports/abc_analysis.php'],
+        ['label' => 'Expiry Forecast', 'url' => BASE_URL . '/modules/reports/expiry_forecast.php'],
     ]],
     ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => BASE_URL . '/modules/notifications/index.php', 'dir' => 'notifications'],
     ['icon' => 'bi-gear', 'label' => 'Settings', 'url' => '#', 'dir' => 'settings', 'children' => [
