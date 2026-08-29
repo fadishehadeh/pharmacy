@@ -23,6 +23,7 @@ $menuItems = [
         ['label' => 'Stocktake', 'url' => BASE_URL . '/modules/inventory/stocktake.php'],
         ['label' => 'Near-Expiry Deals', 'url' => BASE_URL . '/modules/inventory/near_expiry_deals.php'],
         ['label' => 'Expiry Calendar', 'url' => BASE_URL . '/modules/inventory/expiry_calendar.php'],
+        ['label' => 'Medicine Photos', 'url' => BASE_URL . '/modules/inventory/medicine_photos.php'],
     ]],
     ['icon' => 'bi-cart3', 'label' => 'Point of Sale', 'url' => '#', 'dir' => 'pos', 'children' => [
         ['label' => 'New Sale', 'url' => BASE_URL . '/modules/pos/index.php'],
@@ -31,6 +32,7 @@ $menuItems = [
     ]],
     ['icon' => 'bi-file-medical', 'label' => 'Prescriptions', 'url' => '#', 'dir' => 'prescriptions', 'children' => [
         ['label' => 'All Prescriptions', 'url' => BASE_URL . '/modules/prescriptions/index.php'],
+        ['label' => 'Refills', 'url' => BASE_URL . '/modules/prescriptions/refills.php'],
     ]],
     ['icon' => 'bi-receipt', 'label' => 'Sales', 'url' => '#', 'dir' => 'sales', 'children' => [
         ['label' => 'Sales History', 'url' => BASE_URL . '/modules/sales/index.php'],
@@ -89,6 +91,8 @@ $menuItems = [
         ['label' => 'Inventory Movement', 'url' => BASE_URL . '/modules/reports/inventory_movement.php'],
         ['label' => 'Waste Report', 'url' => BASE_URL . '/modules/reports/waste_report.php'],
         ['label' => 'Tax Report', 'url' => BASE_URL . '/modules/reports/tax_report.php'],
+        ['label' => 'Period Comparison', 'url' => BASE_URL . '/modules/reports/comparison.php'],
+        ['label' => 'Print Summary', 'url' => BASE_URL . '/modules/reports/dashboard_print.php'],
     ]],
     ['icon' => 'bi-bell', 'label' => 'Alerts', 'url' => '#', 'dir' => 'notifications', 'children' => [
         ['label' => 'Alert Dashboard', 'url' => BASE_URL . '/modules/notifications/index.php'],
@@ -100,6 +104,7 @@ $menuItems = [
         ['label' => 'Database Backup', 'url' => BASE_URL . '/modules/settings/backup.php'],
         ['label' => 'Shift Management', 'url' => BASE_URL . '/modules/settings/shifts.php'],
         ['label' => 'Pharmacy Profile', 'url' => BASE_URL . '/modules/settings/pharmacy_profile.php'],
+        ['label' => 'Data Cleanup', 'url' => BASE_URL . '/modules/settings/data_cleanup.php'],
     ]],
 ];
 ?>

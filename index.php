@@ -4,324 +4,591 @@ require_once __DIR__ . '/includes/header.php';
 requireLogin();
 
 $db = getDB();
+$user = currentUser();
+$exchangeRate = floatval(getSetting('exchange_rate', '89500'));
+$pharmacyName = getSetting('pharmacy_name', 'My Pharmacy');
 
-$totalMedicines = $db->query("SELECT COUNT(*) FROM medicines WHERE is_active = 1")->fetchColumn();
-$outOfStock = $db->query("SELECT COUNT(*) FROM medicines WHERE quantity_in_stock = 0 AND is_active = 1")->fetchColumn();
-$lowStock = $db->query("SELECT COUNT(*) FROM medicines WHERE quantity_in_stock > 0 AND quantity_in_stock <= min_stock_level AND is_active = 1")->fetchColumn();
-$expiringCount = $db->query("SELECT COUNT(*) FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND expiry_date >= CURDATE() AND is_active = 1")->fetchColumn();
-$expiredCount = $db->query("SELECT COUNT(*) FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date < CURDATE() AND is_active = 1")->fetchColumn();
+// --- KPI Queries (all wrapped in try/catch) ---
 
-$todaySales = $db->query("SELECT COALESCE(SUM(total_amount), 0) FROM sales WHERE DATE(sale_date) = CURDATE() AND status = 'completed'")->fetchColumn();
-$todayTransactions = $db->query("SELECT COUNT(*) FROM sales WHERE DATE(sale_date) = CURDATE() AND status = 'completed'")->fetchColumn();
-$monthSales = $db->query("SELECT COALESCE(SUM(total_amount), 0) FROM sales WHERE MONTH(sale_date) = MONTH(CURDATE()) AND YEAR(sale_date) = YEAR(CURDATE()) AND status = 'completed'")->fetchColumn();
-$yesterdaySales = $db->query("SELECT COALESCE(SUM(total_amount), 0) FROM sales WHERE DATE(sale_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND status = 'completed'")->fetchColumn();
-
-$pendingClaims = $db->query("SELECT COUNT(*) FROM insurance_claims WHERE status IN ('pending','submitted')")->fetchColumn();
-$inventoryValue = $db->query("SELECT COALESCE(SUM(quantity_in_stock * cost_price), 0) FROM medicines WHERE is_active = 1")->fetchColumn();
-
-$patientCount = 0;
-$interactionCount = 0;
-$needReorder = 0;
-$controlledCount = 0;
+// Today's Revenue
+$todaySales = 0;
+$todayTransactions = 0;
+$todayProfit = 0;
 try {
-    $patientCount = $db->query("SELECT COUNT(*) FROM patient_profiles")->fetchColumn();
+    $todaySales = $db->query("SELECT COALESCE(SUM(total_amount), 0) FROM sales WHERE DATE(sale_date) = CURDATE() AND status = 'completed'")->fetchColumn();
+    $todayTransactions = $db->query("SELECT COUNT(*) FROM sales WHERE DATE(sale_date) = CURDATE() AND status = 'completed'")->fetchColumn();
+    $todayProfit = $db->query("SELECT COALESCE(SUM(si.total_price - (si.cost_price * si.quantity)), 0) FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE DATE(s.sale_date) = CURDATE() AND s.status = 'completed'")->fetchColumn();
 } catch (Exception $e) {}
+
+// Low Stock & Expiry
+$lowStockCount = 0;
+$outOfStock = 0;
+$expiringCount = 0;
+$expiredCount = 0;
 try {
-    $interactionCount = $db->query("SELECT COUNT(*) FROM drug_interactions")->fetchColumn();
+    $lowStockCount = $db->query("SELECT COUNT(*) FROM medicines WHERE quantity_in_stock > 0 AND quantity_in_stock <= min_stock_level AND is_active = 1")->fetchColumn();
+    $outOfStock = $db->query("SELECT COUNT(*) FROM medicines WHERE quantity_in_stock = 0 AND is_active = 1")->fetchColumn();
+    $expiringCount = $db->query("SELECT COUNT(*) FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND expiry_date >= CURDATE() AND is_active = 1")->fetchColumn();
+    $expiredCount = $db->query("SELECT COUNT(*) FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date < CURDATE() AND is_active = 1")->fetchColumn();
 } catch (Exception $e) {}
+
+// Pending Orders
+$pendingOrders = 0;
 try {
-    $needReorder = $db->query("SELECT COUNT(*) FROM medicines WHERE is_active = 1 AND quantity_in_stock <= min_stock_level")->fetchColumn();
+    $pendingOrders = $db->query("SELECT COUNT(*) FROM purchase_orders WHERE status IN ('draft','ordered','partial')")->fetchColumn();
 } catch (Exception $e) {}
-$controlledCount = $db->query("SELECT COUNT(*) FROM medicines WHERE is_controlled = 1 AND is_active = 1")->fetchColumn();
 
-$pendingOrders = $db->query("SELECT COUNT(*) FROM purchase_orders WHERE status IN ('draft','ordered','partial')")->fetchColumn();
+// Active Customers Today
+$activeCustomersToday = 0;
+try {
+    $activeCustomersToday = $db->query("SELECT COUNT(DISTINCT customer_id) FROM sales WHERE DATE(sale_date) = CURDATE() AND status = 'completed' AND customer_id IS NOT NULL")->fetchColumn();
+} catch (Exception $e) {}
 
-$todayProfit = $db->query("SELECT COALESCE(SUM(si.total_price - (si.cost_price * si.quantity)), 0) FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE DATE(s.sale_date) = CURDATE() AND s.status = 'completed'")->fetchColumn();
+// Cash Register
+$openRegister = null;
+try {
+    $openRegister = $db->query("SELECT cr.*, u.full_name as opener FROM cash_register cr LEFT JOIN users u ON cr.opened_by = u.id WHERE cr.status = 'open' ORDER BY cr.opened_at DESC LIMIT 1")->fetch();
+} catch (Exception $e) {}
 
-$pendingDeliveries = 0;
-$dueReminders = 0;
-$activeQuotes = 0;
-try { $pendingDeliveries = $db->query("SELECT COUNT(*) FROM deliveries WHERE status IN ('pending','confirmed','in_transit') AND delivery_date <= CURDATE()")->fetchColumn(); } catch (Exception $e) {}
-try { $dueReminders = $db->query("SELECT COUNT(*) FROM medicine_reminders WHERE status = 'pending' AND reminder_date <= CURDATE()")->fetchColumn(); } catch (Exception $e) {}
-try { $activeQuotes = $db->query("SELECT COUNT(*) FROM quotations WHERE status = 'active'")->fetchColumn(); } catch (Exception $e) {}
+// --- Charts Data ---
 
-$recentSales = $db->query("SELECT s.*, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.id ORDER BY s.sale_date DESC LIMIT 10")->fetchAll();
-$expiringMeds = $db->query("SELECT m.*, c.name as category_name FROM medicines m LEFT JOIN categories c ON m.category_id = c.id WHERE m.expiry_date IS NOT NULL AND m.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND m.expiry_date >= CURDATE() AND m.is_active = 1 ORDER BY m.expiry_date ASC LIMIT 10")->fetchAll();
-$lowStockMeds = $db->query("SELECT m.*, c.name as category_name FROM medicines m LEFT JOIN categories c ON m.category_id = c.id WHERE m.is_active = 1 AND m.quantity_in_stock <= m.min_stock_level ORDER BY m.quantity_in_stock ASC LIMIT 10")->fetchAll();
+// Sales last 7 days
+$last7days = [];
+try {
+    $last7days = $db->query("SELECT DATE(sale_date) as day, COALESCE(SUM(total_amount),0) as total, COUNT(*) as cnt FROM sales WHERE sale_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status = 'completed' GROUP BY DATE(sale_date) ORDER BY day")->fetchAll();
+} catch (Exception $e) {}
 
-$last7days = $db->query("SELECT DATE(sale_date) as day, COALESCE(SUM(total_amount),0) as total FROM sales WHERE sale_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status = 'completed' GROUP BY DATE(sale_date) ORDER BY day")->fetchAll();
+// Revenue by category (today)
+$revenueByCategory = [];
+try {
+    $revenueByCategory = $db->query("SELECT COALESCE(c.name, 'Uncategorized') as category, SUM(si.total_price) as revenue FROM sale_items si JOIN sales s ON si.sale_id = s.id LEFT JOIN medicines m ON si.medicine_id = m.id LEFT JOIN categories c ON m.category_id = c.id WHERE DATE(s.sale_date) = CURDATE() AND s.status = 'completed' GROUP BY c.id ORDER BY revenue DESC LIMIT 8")->fetchAll();
+} catch (Exception $e) {}
 
-$topProducts = $db->query("SELECT m.name, SUM(si.quantity) as qty_sold, SUM(si.total_price) as revenue FROM sale_items si JOIN medicines m ON si.medicine_id = m.id JOIN sales s ON si.sale_id = s.id WHERE s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND s.status = 'completed' GROUP BY m.id ORDER BY qty_sold DESC LIMIT 5")->fetchAll();
+// --- Recent Sales ---
+$recentSales = [];
+try {
+    $recentSales = $db->query("SELECT s.id, s.invoice_number, s.total_amount, s.currency, s.payment_method, s.sale_date, s.status, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.id ORDER BY s.sale_date DESC LIMIT 10")->fetchAll();
+} catch (Exception $e) {}
 
-$salesByPayment = $db->query("SELECT payment_method, COUNT(*) as cnt, SUM(total_amount) as total FROM sales WHERE MONTH(sale_date) = MONTH(CURDATE()) AND YEAR(sale_date) = YEAR(CURDATE()) AND status = 'completed' GROUP BY payment_method")->fetchAll();
+// --- Alerts Data ---
+$expiredMeds = [];
+try {
+    $expiredMeds = $db->query("SELECT id, name, expiry_date, quantity_in_stock FROM medicines WHERE expiry_date IS NOT NULL AND expiry_date < CURDATE() AND is_active = 1 ORDER BY expiry_date ASC LIMIT 5")->fetchAll();
+} catch (Exception $e) {}
+
+$outOfStockMeds = [];
+try {
+    $outOfStockMeds = $db->query("SELECT id, name, min_stock_level FROM medicines WHERE quantity_in_stock = 0 AND is_active = 1 ORDER BY name ASC LIMIT 5")->fetchAll();
+} catch (Exception $e) {}
+
+$pendingDeliveries = [];
+try {
+    $pendingDeliveries = $db->query("SELECT id, delivery_date, status FROM deliveries WHERE status IN ('pending','confirmed','in_transit') ORDER BY delivery_date ASC LIMIT 5")->fetchAll();
+} catch (Exception $e) {}
+
+$dueReminders = [];
+try {
+    $dueReminders = $db->query("SELECT mr.id, mr.reminder_date, m.name as medicine_name FROM medicine_reminders mr LEFT JOIN medicines m ON mr.medicine_id = m.id WHERE mr.status = 'pending' AND mr.reminder_date <= CURDATE() ORDER BY mr.reminder_date ASC LIMIT 5")->fetchAll();
+} catch (Exception $e) {}
+
+// --- Stats Grid ---
+$totalMedicines = 0;
+$totalCategories = 0;
+$totalCustomers = 0;
+$totalSuppliers = 0;
+try { $totalMedicines = $db->query("SELECT COUNT(*) FROM medicines WHERE is_active = 1")->fetchColumn(); } catch (Exception $e) {}
+try { $totalCategories = $db->query("SELECT COUNT(*) FROM categories")->fetchColumn(); } catch (Exception $e) {}
+try { $totalCustomers = $db->query("SELECT COUNT(*) FROM customers")->fetchColumn(); } catch (Exception $e) {}
+try { $totalSuppliers = $db->query("SELECT COUNT(*) FROM suppliers WHERE is_active = 1")->fetchColumn(); } catch (Exception $e) {}
+
+// Total alert count for alerts panel header
+$totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($dueReminders);
 ?>
 
-<div class="row g-3 mb-3">
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Total Medicines</div>
-                    <div class="stat-value"><?= number_format($totalMedicines) ?></div>
-                    <small class="text-muted"><?= $controlledCount ?> controlled</small>
-                </div>
-                <i class="bi bi-capsule stat-icon text-primary"></i>
-            </div>
+<style>
+.dash-welcome {
+    background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+}
+.dash-welcome .welcome-title { font-size: 1.25rem; font-weight: 700; }
+.dash-welcome .welcome-meta { font-size: 0.85rem; opacity: 0.85; }
+.dash-welcome .register-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+}
+.dash-welcome .register-badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.dash-welcome .register-badge .dot.open { background: #34D399; box-shadow: 0 0 6px #34D399; }
+.dash-welcome .register-badge .dot.closed { background: #F87171; }
+
+.kpi-card {
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card .kpi-icon {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    font-size: 2.5rem;
+    opacity: 0.08;
+}
+.kpi-card .kpi-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748B;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.kpi-card .kpi-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #0F172A;
+    line-height: 1.2;
+}
+.kpi-card .kpi-sub {
+    font-size: 0.78rem;
+    color: #94A3B8;
+    margin-top: 4px;
+}
+.kpi-card .kpi-link {
+    font-size: 0.75rem;
+    margin-top: 6px;
+}
+.kpi-card.border-accent-green { border-left: 4px solid #059669; }
+.kpi-card.border-accent-blue { border-left: 4px solid #2563EB; }
+.kpi-card.border-accent-amber { border-left: 4px solid #D97706; }
+.kpi-card.border-accent-red { border-left: 4px solid #DC2626; }
+.kpi-card.border-accent-purple { border-left: 4px solid #7C3AED; }
+.kpi-card.border-accent-cyan { border-left: 4px solid #0891B2; }
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 10px;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    color: #334155;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    text-align: center;
+}
+.quick-action-btn:hover {
+    border-color: #2563EB;
+    color: #2563EB;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.12);
+}
+.quick-action-btn i { font-size: 1.5rem; }
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #F1F5F9;
+    font-size: 0.85rem;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-item .activity-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+.activity-item .activity-amount { font-weight: 700; white-space: nowrap; }
+
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #F1F5F9;
+    font-size: 0.82rem;
+}
+.alert-item:last-child { border-bottom: none; }
+.alert-item .alert-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+.stats-grid-card {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 10px;
+}
+.stats-grid-card .stats-num { font-size: 1.5rem; font-weight: 700; color: #0F172A; }
+.stats-grid-card .stats-label { font-size: 0.78rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.section-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1E293B;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.section-header .badge { font-size: 0.7rem; }
+</style>
+
+<!-- 1. Welcome Bar -->
+<div class="dash-welcome mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <div class="welcome-title">Welcome back, <?= sanitize($user['full_name'] ?? 'User') ?></div>
+            <div class="welcome-meta"><?= sanitize($pharmacyName) ?> &mdash; <?= date('l, F j, Y') ?> &bull; <span id="live-clock"><?= date('h:i A') ?></span></div>
         </div>
-    </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card success">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Today's Sales</div>
-                    <div class="stat-value"><?= formatCurrency($todaySales) ?></div>
-                    <small class="text-muted"><?= $todayTransactions ?> transactions | Profit: <?= formatCurrency($todayProfit) ?></small>
+        <div class="d-flex align-items-center gap-3">
+            <?php if ($openRegister): ?>
+                <div class="register-badge">
+                    <span class="dot open"></span>
+                    Register Open &mdash; <?= sanitize($openRegister['opener'] ?? 'Unknown') ?>
                 </div>
-                <i class="bi bi-cash-stack stat-icon text-success"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card warning">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Low Stock</div>
-                    <div class="stat-value"><?= number_format($needReorder) ?></div>
-                    <small class="text-muted"><?= $outOfStock ?> out of stock</small>
+            <?php else: ?>
+                <div class="register-badge">
+                    <span class="dot closed"></span>
+                    Register Closed
                 </div>
-                <i class="bi bi-exclamation-triangle stat-icon text-warning"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card danger">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Expiring Soon</div>
-                    <div class="stat-value"><?= number_format($expiringCount) ?></div>
-                    <small class="text-muted"><?= $expiredCount ?> already expired</small>
-                </div>
-                <i class="bi bi-clock stat-icon text-danger"></i>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
+<!-- 2. KPI Row -->
 <div class="row g-3 mb-3">
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card info">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Monthly Sales</div>
-                    <div class="stat-value"><?= formatCurrency($monthSales) ?></div>
-                </div>
-                <i class="bi bi-graph-up stat-icon text-info"></i>
-            </div>
+    <!-- Today's Revenue -->
+    <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="card kpi-card border-accent-green">
+            <i class="bi bi-cash-stack kpi-icon"></i>
+            <div class="kpi-label">Today's Revenue</div>
+            <div class="kpi-value"><?= formatCurrency($todaySales) ?></div>
+            <div class="kpi-sub"><?= number_format($todaySales * $exchangeRate, 0, '.', ',') ?> L.L.</div>
+            <div class="kpi-sub">Profit: <?= formatCurrency($todayProfit) ?></div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Inventory Value</div>
-                    <div class="stat-value"><?= formatCurrency($inventoryValue) ?></div>
-                </div>
-                <i class="bi bi-box-seam stat-icon text-primary"></i>
-            </div>
+    <!-- Today's Transactions -->
+    <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="card kpi-card border-accent-blue">
+            <i class="bi bi-receipt kpi-icon"></i>
+            <div class="kpi-label">Transactions</div>
+            <div class="kpi-value"><?= number_format($todayTransactions) ?></div>
+            <div class="kpi-sub">Today's completed sales</div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card warning">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Pending</div>
-                    <div class="stat-value"><?= $pendingClaims ?> / <?= $pendingOrders ?></div>
-                    <small class="text-muted">Claims / Orders</small>
-                </div>
-                <i class="bi bi-shield-plus stat-icon text-warning"></i>
-            </div>
+    <!-- Low Stock Alerts -->
+    <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="card kpi-card border-accent-amber">
+            <i class="bi bi-exclamation-triangle kpi-icon"></i>
+            <div class="kpi-label">Low Stock</div>
+            <div class="kpi-value"><?= number_format($lowStockCount + $outOfStock) ?></div>
+            <div class="kpi-sub"><?= $outOfStock ?> out of stock</div>
+            <div class="kpi-link"><a href="<?= BASE_URL ?>/modules/inventory/alerts.php">View alerts &rarr;</a></div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="card stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Patients</div>
-                    <div class="stat-value"><?= number_format($patientCount) ?></div>
-                    <small class="text-muted"><?= $interactionCount ?> interactions tracked</small>
-                </div>
-                <i class="bi bi-person-heart stat-icon text-primary"></i>
-            </div>
+    <!-- Expiring Soon -->
+    <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="card kpi-card border-accent-red">
+            <i class="bi bi-clock-history kpi-icon"></i>
+            <div class="kpi-label">Expiring Soon</div>
+            <div class="kpi-value"><?= number_format($expiringCount) ?></div>
+            <div class="kpi-sub"><?= $expiredCount ?> already expired</div>
+            <div class="kpi-link"><a href="<?= BASE_URL ?>/modules/inventory/alerts.php" class="text-danger">View expiry alerts &rarr;</a></div>
+        </div>
+    </div>
+    <!-- Pending Orders -->
+    <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="card kpi-card border-accent-purple">
+            <i class="bi bi-box-seam kpi-icon"></i>
+            <div class="kpi-label">Pending Orders</div>
+            <div class="kpi-value"><?= number_format($pendingOrders) ?></div>
+            <div class="kpi-sub">Purchase orders open</div>
+            <div class="kpi-link"><a href="<?= BASE_URL ?>/modules/suppliers/index.php">View orders &rarr;</a></div>
+        </div>
+    </div>
+    <!-- Active Customers -->
+    <div class="col-xl-2 col-lg-4 col-md-6">
+        <div class="card kpi-card border-accent-cyan">
+            <i class="bi bi-people kpi-icon"></i>
+            <div class="kpi-label">Customers Today</div>
+            <div class="kpi-value"><?= number_format($activeCustomersToday) ?></div>
+            <div class="kpi-sub">Unique customers served</div>
         </div>
     </div>
 </div>
 
+<!-- 3. Charts Row -->
 <div class="row g-3 mb-3">
-    <div class="col-12">
-        <div class="card p-3">
-            <div class="d-flex flex-wrap gap-2">
-                <a href="<?= BASE_URL ?>/modules/pos/index.php" class="btn btn-primary"><i class="bi bi-cart3 me-1"></i>Open POS</a>
-                <a href="<?= BASE_URL ?>/modules/inventory/add.php" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Add Medicine</a>
-                <a href="<?= BASE_URL ?>/modules/inventory/reorder.php" class="btn btn-outline-warning"><i class="bi bi-arrow-repeat me-1"></i>Smart Reorder</a>
-                <a href="<?= BASE_URL ?>/modules/patients/index.php" class="btn btn-outline-info"><i class="bi bi-person-heart me-1"></i>Patients</a>
-                <a href="<?= BASE_URL ?>/modules/interactions/index.php" class="btn btn-outline-danger"><i class="bi bi-shield-exclamation me-1"></i>Drug Interactions</a>
-                <a href="<?= BASE_URL ?>/modules/prescriptions/index.php" class="btn btn-outline-success"><i class="bi bi-file-medical me-1"></i>Prescriptions</a>
-                <a href="<?= BASE_URL ?>/modules/reports/daily.php" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph me-1"></i>Daily Report</a>
-                <a href="<?= BASE_URL ?>/modules/sales/quotations.php" class="btn btn-outline-dark"><i class="bi bi-file-text me-1"></i>Quotations<?php if ($activeQuotes): ?> <span class="badge bg-primary"><?= $activeQuotes ?></span><?php endif; ?></a>
-                <a href="<?= BASE_URL ?>/modules/sales/deliveries.php" class="btn btn-outline-info"><i class="bi bi-truck me-1"></i>Deliveries<?php if ($pendingDeliveries): ?> <span class="badge bg-warning"><?= $pendingDeliveries ?></span><?php endif; ?></a>
-                <a href="<?= BASE_URL ?>/modules/finance/cash_register.php" class="btn btn-outline-secondary"><i class="bi bi-cash-coin me-1"></i>Cash Register</a>
-                <a href="<?= BASE_URL ?>/modules/notifications/index.php" class="btn btn-outline-dark position-relative"><i class="bi bi-bell me-1"></i>Alerts
-                    <?php if ($needReorder + $expiringCount + $expiredCount > 0): ?>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"><?= $needReorder + $expiringCount + $expiredCount ?></span>
-                    <?php endif; ?>
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3">
     <div class="col-lg-8">
-        <div class="card p-3 mb-3">
-            <h6 class="mb-3"><i class="bi bi-graph-up me-2"></i>Sales - Last 7 Days</h6>
-            <canvas id="salesChart" height="180"></canvas>
+        <div class="card p-3">
+            <div class="section-header"><i class="bi bi-graph-up"></i> Sales Trend &mdash; Last 7 Days</div>
+            <canvas id="salesTrendChart" height="160"></canvas>
         </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-3 h-100">
+            <div class="section-header"><i class="bi bi-pie-chart"></i> Revenue by Category (Today)</div>
+            <?php if (empty($revenueByCategory)): ?>
+                <div class="d-flex align-items-center justify-content-center flex-grow-1">
+                    <p class="text-muted mb-0">No sales recorded today</p>
+                </div>
+            <?php else: ?>
+                <canvas id="categoryChart" height="200"></canvas>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
-        <div class="row g-3 mb-3">
-            <div class="col-md-6">
-                <div class="card p-3">
-                    <h6 class="mb-3"><i class="bi bi-trophy me-2"></i>Top Products (30d)</h6>
-                    <?php if (empty($topProducts)): ?>
-                        <p class="text-muted text-center py-2">No sales data</p>
-                    <?php else: ?>
-                    <div class="list-group list-group-flush">
-                        <?php foreach ($topProducts as $i => $tp): ?>
-                        <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="badge bg-primary me-1"><?= $i + 1 ?></span>
-                                <span class="small"><?= sanitize($tp['name']) ?></span>
+<!-- 4. Quick Actions Panel -->
+<div class="card p-3 mb-3">
+    <div class="section-header"><i class="bi bi-lightning"></i> Quick Actions</div>
+    <div class="row g-2">
+        <div class="col-6 col-sm-4 col-md-2">
+            <a href="<?= BASE_URL ?>/modules/pos/index.php" class="quick-action-btn w-100">
+                <i class="bi bi-cart3 text-primary"></i>
+                New Sale
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-md-2">
+            <a href="<?= BASE_URL ?>/modules/inventory/add.php" class="quick-action-btn w-100">
+                <i class="bi bi-capsule text-success"></i>
+                Add Medicine
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-md-2">
+            <a href="<?= BASE_URL ?>/modules/prescriptions/index.php" class="quick-action-btn w-100">
+                <i class="bi bi-file-medical text-info"></i>
+                Prescriptions
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-md-2">
+            <a href="<?= BASE_URL ?>/modules/finance/cash_register.php" class="quick-action-btn w-100">
+                <i class="bi bi-cash-coin text-warning"></i>
+                Cash Register
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-md-2">
+            <a href="<?= BASE_URL ?>/modules/suppliers/index.php" class="quick-action-btn w-100">
+                <i class="bi bi-truck text-purple" style="color:#7C3AED"></i>
+                Purchase Order
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-md-2">
+            <a href="<?= BASE_URL ?>/modules/sales/quotations.php" class="quick-action-btn w-100">
+                <i class="bi bi-file-text text-secondary"></i>
+                Quotation
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Activity Feed + 6. Alerts Panel -->
+<div class="row g-3 mb-3">
+    <!-- Activity Feed -->
+    <div class="col-lg-7">
+        <div class="card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="section-header mb-0"><i class="bi bi-activity"></i> Recent Sales</div>
+                <a href="<?= BASE_URL ?>/modules/sales/index.php" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <?php if (empty($recentSales)): ?>
+                <p class="text-muted text-center py-4">No sales recorded yet</p>
+            <?php else: ?>
+                <div style="max-height:420px;overflow-y:auto">
+                <?php foreach ($recentSales as $sale): ?>
+                    <?php
+                    $paymentIcons = [
+                        'cash' => ['bi-cash', 'bg-success bg-opacity-10 text-success'],
+                        'card' => ['bi-credit-card', 'bg-primary bg-opacity-10 text-primary'],
+                        'credit' => ['bi-clock', 'bg-warning bg-opacity-10 text-warning'],
+                        'insurance' => ['bi-shield-check', 'bg-info bg-opacity-10 text-info'],
+                    ];
+                    $pm = $sale['payment_method'] ?? 'cash';
+                    $icon = $paymentIcons[$pm] ?? $paymentIcons['cash'];
+                    ?>
+                    <div class="activity-item">
+                        <div class="activity-icon <?= $icon[1] ?>">
+                            <i class="bi <?= $icon[0] ?>"></i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="text-truncate">
+                                    <a href="<?= BASE_URL ?>/modules/sales/view.php?id=<?= (int)$sale['id'] ?>" class="fw-semibold text-decoration-none"><?= sanitize($sale['invoice_number']) ?></a>
+                                    <span class="text-muted ms-1">&mdash; <?= sanitize($sale['customer_name'] ?? 'Walk-in') ?></span>
+                                </div>
+                                <div class="activity-amount"><?= formatCurrency($sale['total_amount'], $sale['currency'] ?? 'USD') ?></div>
                             </div>
-                            <div class="text-end">
-                                <strong class="small"><?= $tp['qty_sold'] ?> sold</strong><br>
-                                <small class="text-muted"><?= formatCurrency($tp['revenue']) ?></small>
+                            <div class="d-flex gap-2 mt-1">
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary"><?= ucfirst(sanitize($pm)) ?></span>
+                                <span class="badge bg-<?= $sale['status'] === 'completed' ? 'success' : 'warning' ?> bg-opacity-10 text-<?= $sale['status'] === 'completed' ? 'success' : 'warning' ?>"><?= ucfirst(sanitize($sale['status'])) ?></span>
+                                <small class="text-muted"><?= formatDate($sale['sale_date'], 'M d, h:i A') ?></small>
                             </div>
                         </div>
-                        <?php endforeach; ?>
                     </div>
-                    <?php endif; ?>
+                <?php endforeach; ?>
                 </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card p-3">
-                    <h6 class="mb-3"><i class="bi bi-credit-card me-2"></i>Payments (This Month)</h6>
-                    <?php if (empty($salesByPayment)): ?>
-                        <p class="text-muted text-center py-2">No sales this month</p>
-                    <?php else: ?>
-                    <canvas id="paymentChart" height="200"></canvas>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="card p-3">
-            <h6 class="mb-3"><i class="bi bi-receipt me-2"></i>Recent Sales</h6>
-            <?php if (empty($recentSales)): ?>
-                <p class="text-muted text-center py-3">No sales yet</p>
-            <?php else: ?>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th><th class="text-end">Total</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recentSales as $sale): ?>
-                        <tr>
-                            <td><a href="<?= BASE_URL ?>/modules/sales/view.php?id=<?= $sale['id'] ?>"><?= sanitize($sale['invoice_number']) ?></a></td>
-                            <td><?= sanitize($sale['customer_name'] ?? 'Walk-in') ?></td>
-                            <td><?= formatDate($sale['sale_date'], 'M d, H:i') ?></td>
-                            <td><span class="badge bg-secondary"><?= ucfirst($sale['payment_method']) ?></span></td>
-                            <td class="text-end fw-semibold"><?= formatCurrency($sale['total_amount'], $sale['currency']) ?></td>
-                            <td><span class="badge bg-<?= $sale['status'] === 'completed' ? 'success' : 'warning' ?>"><?= ucfirst($sale['status']) ?></span></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <?php if ($expiredCount > 0): ?>
-        <div class="card p-3 mb-3 border-danger">
-            <h6 class="text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Expired Medicines (<?= $expiredCount ?>)</h6>
-            <p class="small text-muted mb-2">These medicines have passed their expiry date and should be removed from shelves.</p>
-            <a href="<?= BASE_URL ?>/modules/inventory/alerts.php" class="btn btn-sm btn-outline-danger w-100">View All Expired</a>
-        </div>
-        <?php endif; ?>
-
-        <div class="card p-3 mb-3">
-            <h6><i class="bi bi-clock me-2"></i>Expiring Soon (<?= count($expiringMeds) ?>)</h6>
-            <?php if (empty($expiringMeds)): ?>
-                <p class="text-muted text-center py-2">No medicines expiring soon</p>
-            <?php else: ?>
-                <div class="list-group list-group-flush" style="max-height:250px;overflow-y:auto">
-                    <?php foreach ($expiringMeds as $med): ?>
-                    <?php $daysLeft = (strtotime($med['expiry_date']) - time()) / 86400; ?>
-                    <a href="<?= BASE_URL ?>/modules/inventory/edit.php?id=<?= $med['id'] ?>" class="list-group-item list-group-item-action p-2">
-                        <div class="d-flex justify-content-between">
-                            <strong class="small"><?= sanitize($med['name']) ?></strong>
-                            <span class="badge bg-<?= $daysLeft <= 30 ? 'danger' : 'warning' ?>"><?= ceil($daysLeft) ?>d</span>
-                        </div>
-                        <small class="text-muted"><?= formatDate($med['expiry_date'], 'M d, Y') ?> | Qty: <?= $med['quantity_in_stock'] ?></small>
-                    </a>
-                    <?php endforeach; ?>
+    <!-- Alerts Panel -->
+    <div class="col-lg-5">
+        <div class="card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="section-header mb-0">
+                    <i class="bi bi-bell"></i> Alerts
+                    <?php if ($totalAlerts > 0): ?>
+                        <span class="badge bg-danger rounded-pill"><?= $totalAlerts ?></span>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
-        </div>
+                <a href="<?= BASE_URL ?>/modules/notifications/index.php" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
 
-        <div class="card p-3 mb-3">
-            <h6><i class="bi bi-arrow-down-circle me-2"></i>Low Stock (<?= count($lowStockMeds) ?>)</h6>
-            <?php if (empty($lowStockMeds)): ?>
-                <p class="text-muted text-center py-2">All medicines well-stocked</p>
-            <?php else: ?>
-                <div class="list-group list-group-flush" style="max-height:250px;overflow-y:auto">
-                    <?php foreach ($lowStockMeds as $med): ?>
-                    <a href="<?= BASE_URL ?>/modules/inventory/edit.php?id=<?= $med['id'] ?>" class="list-group-item list-group-item-action p-2">
-                        <div class="d-flex justify-content-between">
-                            <strong class="small"><?= sanitize($med['name']) ?></strong>
-                            <span class="badge bg-<?= $med['quantity_in_stock'] <= 0 ? 'danger' : 'warning' ?>"><?= $med['quantity_in_stock'] ?>/<?= $med['min_stock_level'] ?></span>
-                        </div>
-                        <small class="text-muted"><?= sanitize($med['category_name'] ?? '-') ?></small>
-                    </a>
-                    <?php endforeach; ?>
-                </div>
-                <a href="<?= BASE_URL ?>/modules/inventory/reorder.php" class="btn btn-sm btn-outline-warning w-100 mt-2">View Reorder Suggestions</a>
-            <?php endif; ?>
-        </div>
+            <div style="max-height:420px;overflow-y:auto">
+                <?php if ($totalAlerts === 0 && $expiringCount === 0): ?>
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle" style="font-size:2rem;opacity:0.4"></i>
+                        <p class="mt-2 mb-0">No critical alerts</p>
+                    </div>
+                <?php endif; ?>
 
-        <div class="card p-3">
-            <h6><i class="bi bi-info-circle me-2"></i>Quick Info</h6>
-            <div class="d-flex justify-content-between mb-1"><span class="small">Yesterday's Sales</span><strong class="small"><?= formatCurrency($yesterdaySales) ?></strong></div>
-            <div class="d-flex justify-content-between mb-1"><span class="small">Pending PO</span><strong class="small"><?= $pendingOrders ?></strong></div>
-            <div class="d-flex justify-content-between mb-1"><span class="small">Insurance Claims</span><strong class="small"><?= $pendingClaims ?></strong></div>
-            <div class="d-flex justify-content-between mb-1"><span class="small">Pending Deliveries</span><strong class="small"><?= $pendingDeliveries ?></strong></div>
-            <div class="d-flex justify-content-between mb-1"><span class="small">Refill Reminders Due</span><strong class="small text-<?= $dueReminders > 0 ? 'warning' : 'muted' ?>"><?= $dueReminders ?></strong></div>
-            <div class="d-flex justify-content-between"><span class="small">Drug Interactions DB</span><strong class="small"><?= $interactionCount ?></strong></div>
+                <!-- Expired Medicines -->
+                <?php if (!empty($expiredMeds)): ?>
+                    <div class="mb-3">
+                        <div class="small fw-bold text-danger mb-1"><i class="bi bi-x-octagon me-1"></i>Expired Medicines</div>
+                        <?php foreach ($expiredMeds as $med): ?>
+                            <div class="alert-item">
+                                <span class="alert-dot bg-danger"></span>
+                                <div class="flex-grow-1">
+                                    <a href="<?= BASE_URL ?>/modules/inventory/edit.php?id=<?= (int)$med['id'] ?>" class="text-decoration-none fw-semibold"><?= sanitize($med['name']) ?></a>
+                                    <div class="text-muted" style="font-size:0.75rem">Expired <?= formatDate($med['expiry_date'], 'M d, Y') ?> &bull; Qty: <?= (int)$med['quantity_in_stock'] ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if ($expiredCount > 5): ?>
+                            <a href="<?= BASE_URL ?>/modules/inventory/alerts.php" class="small">View all <?= $expiredCount ?> expired &rarr;</a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Out of Stock -->
+                <?php if (!empty($outOfStockMeds)): ?>
+                    <div class="mb-3">
+                        <div class="small fw-bold text-warning mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Out of Stock</div>
+                        <?php foreach ($outOfStockMeds as $med): ?>
+                            <div class="alert-item">
+                                <span class="alert-dot bg-warning"></span>
+                                <div class="flex-grow-1">
+                                    <a href="<?= BASE_URL ?>/modules/inventory/edit.php?id=<?= (int)$med['id'] ?>" class="text-decoration-none fw-semibold"><?= sanitize($med['name']) ?></a>
+                                    <div class="text-muted" style="font-size:0.75rem">Min level: <?= (int)$med['min_stock_level'] ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if ($outOfStock > 5): ?>
+                            <a href="<?= BASE_URL ?>/modules/inventory/alerts.php" class="small">View all <?= $outOfStock ?> out of stock &rarr;</a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Pending Deliveries -->
+                <?php if (!empty($pendingDeliveries)): ?>
+                    <div class="mb-3">
+                        <div class="small fw-bold text-info mb-1"><i class="bi bi-truck me-1"></i>Pending Deliveries</div>
+                        <?php foreach ($pendingDeliveries as $del): ?>
+                            <div class="alert-item">
+                                <span class="alert-dot bg-info"></span>
+                                <div class="flex-grow-1">
+                                    Delivery #<?= (int)$del['id'] ?> &mdash; <?= ucfirst(sanitize($del['status'])) ?>
+                                    <div class="text-muted" style="font-size:0.75rem">Due: <?= formatDate($del['delivery_date'], 'M d, Y') ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <a href="<?= BASE_URL ?>/modules/sales/deliveries.php" class="small">View all deliveries &rarr;</a>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Due Reminders -->
+                <?php if (!empty($dueReminders)): ?>
+                    <div class="mb-3">
+                        <div class="small fw-bold text-purple mb-1" style="color:#7C3AED"><i class="bi bi-alarm me-1"></i>Due Reminders</div>
+                        <?php foreach ($dueReminders as $rem): ?>
+                            <div class="alert-item">
+                                <span class="alert-dot" style="background:#7C3AED"></span>
+                                <div class="flex-grow-1">
+                                    <?= sanitize($rem['medicine_name'] ?? 'Unknown') ?>
+                                    <div class="text-muted" style="font-size:0.75rem">Due: <?= formatDate($rem['reminder_date'], 'M d, Y') ?></div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <a href="<?= BASE_URL ?>/modules/notifications/index.php" class="small">View all reminders &rarr;</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 7. Stats Grid -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card stats-grid-card">
+            <div class="stats-num"><i class="bi bi-capsule text-primary me-1" style="font-size:1.1rem"></i><?= number_format($totalMedicines) ?></div>
+            <div class="stats-label">Total Medicines</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stats-grid-card">
+            <div class="stats-num"><i class="bi bi-tags text-success me-1" style="font-size:1.1rem"></i><?= number_format($totalCategories) ?></div>
+            <div class="stats-label">Categories</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stats-grid-card">
+            <div class="stats-num"><i class="bi bi-people text-info me-1" style="font-size:1.1rem"></i><?= number_format($totalCustomers) ?></div>
+            <div class="stats-label">Customers</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stats-grid-card">
+            <div class="stats-num"><i class="bi bi-building text-warning me-1" style="font-size:1.1rem"></i><?= number_format($totalSuppliers) ?></div>
+            <div class="stats-label">Suppliers</div>
         </div>
     </div>
 </div>
 
 <?php
+// --- Prepare chart data ---
 $chartLabels = [];
 $chartData = [];
 for ($i = 6; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-$i days"));
-    $chartLabels[] = date('D', strtotime($date));
+    $chartLabels[] = date('D d', strtotime($date));
     $found = false;
     foreach ($last7days as $row) {
         if ($row['day'] === $date) {
-            $chartData[] = $row['total'];
+            $chartData[] = round((float)$row['total'], 2);
             $found = true;
             break;
         }
@@ -329,46 +596,107 @@ for ($i = 6; $i >= 0; $i--) {
     if (!$found) $chartData[] = 0;
 }
 
-$paymentLabels = [];
-$paymentData = [];
-$paymentColors = ['cash' => '#10B981', 'card' => '#3B82F6', 'credit' => '#F59E0B', 'insurance' => '#8B5CF6'];
-foreach ($salesByPayment as $sp) {
-    $paymentLabels[] = ucfirst($sp['payment_method']);
-    $paymentData[] = $sp['total'];
+$catLabels = [];
+$catData = [];
+$catColors = ['#2563EB','#059669','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#84CC16'];
+foreach ($revenueByCategory as $i => $rc) {
+    $catLabels[] = $rc['category'];
+    $catData[] = round((float)$rc['revenue'], 2);
 }
 
 $extraScripts = "<script>
-new Chart(document.getElementById('salesChart'), {
-    type: 'bar',
-    data: {
-        labels: " . json_encode($chartLabels) . ",
-        datasets: [{
-            label: 'Sales (USD)',
-            data: " . json_encode($chartData) . ",
-            backgroundColor: 'rgba(37, 99, 235, 0.2)',
-            borderColor: 'rgba(37, 99, 235, 1)',
-            borderWidth: 2,
-            borderRadius: 6
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
-    }
-});
-" . (!empty($salesByPayment) ? "
-new Chart(document.getElementById('paymentChart'), {
-    type: 'doughnut',
-    data: {
-        labels: " . json_encode($paymentLabels) . ",
-        datasets: [{
-            data: " . json_encode($paymentData) . ",
-            backgroundColor: ['#10B981','#3B82F6','#F59E0B','#8B5CF6']
-        }]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
-});" : "") . "
+// Live clock
+setInterval(function(){
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    var el = document.getElementById('live-clock');
+    if(el) el.textContent = (h<10?'0'+h:h) + ':' + (m<10?'0'+m:m) + ' ' + ampm;
+}, 30000);
+
+// Sales Trend Chart
+var stCtx = document.getElementById('salesTrendChart');
+if (stCtx) {
+    new Chart(stCtx, {
+        type: 'line',
+        data: {
+            labels: " . json_encode($chartLabels) . ",
+            datasets: [{
+                label: 'Revenue (USD)',
+                data: " . json_encode($chartData) . ",
+                borderColor: '#2563EB',
+                backgroundColor: 'rgba(37,99,235,0.08)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2.5,
+                pointBackgroundColor: '#2563EB',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return '$' + ctx.parsed.y.toLocaleString(undefined,{minimumFractionDigits:2}); }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(v) { return '$' + v.toLocaleString(); },
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.04)' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11 } }
+                }
+            }
+        }
+    });
+}
+" . (!empty($revenueByCategory) ? "
+// Category Doughnut Chart
+var ccCtx = document.getElementById('categoryChart');
+if (ccCtx) {
+    new Chart(ccCtx, {
+        type: 'doughnut',
+        data: {
+            labels: " . json_encode($catLabels) . ",
+            datasets: [{
+                data: " . json_encode($catData) . ",
+                backgroundColor: " . json_encode(array_slice($catColors, 0, count($catLabels))) . ",
+                borderWidth: 0,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 10, font: { size: 11 }, padding: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.label + ': $' + ctx.parsed.toLocaleString(undefined,{minimumFractionDigits:2}); }
+                    }
+                }
+            }
+        }
+    });
+}
+" : "") . "
 </script>";
 
 require_once __DIR__ . '/includes/footer.php';
