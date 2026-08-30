@@ -10,6 +10,7 @@ $isInstall = true;
 // Check if already installed
 $configFile = __DIR__ . '/config/database.php';
 if (file_exists($configFile)) {
+    $GLOBALS['isInstall'] = true;
     require_once $configFile;
     try {
         $testDb = getDB();

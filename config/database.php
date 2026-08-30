@@ -16,6 +16,9 @@ function getDB() {
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } catch (PDOException $e) {
+            if (!empty($GLOBALS['isInstall'])) {
+                throw $e;
+            }
             die("Database connection failed. Please import database/schema.sql into MySQL first.");
         }
     }
