@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 define('APP_NAME', 'PharmaSys');
