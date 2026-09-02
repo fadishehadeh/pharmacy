@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Smart Reorder';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $lowStock = $db->query("SELECT m.*, c.name as category_name,
@@ -123,7 +124,6 @@ foreach ($deadStock as $d) $deadStockValue += $d['quantity_in_stock'] * $d['cost
                             <td><?= $m['sales_90d'] ?></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($deadStock)): ?><tr><td colspan="6" class="text-center text-muted py-3">No dead stock detected</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -146,7 +146,6 @@ foreach ($deadStock as $d) $deadStockValue += $d['quantity_in_stock'] * $d['cost
                             <td><?= $m['sales_30d'] ?></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($overstock)): ?><tr><td colspan="6" class="text-center text-muted py-3">No overstock detected</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

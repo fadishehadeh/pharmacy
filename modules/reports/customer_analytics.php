@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Customer Analytics';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = floatval(getSetting('exchange_rate', '89500'));
@@ -311,7 +312,6 @@ try {
                     <td><span class="badge bg-<?= $segBadge ?>"><?= $segment ?></span></td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($customerRanking)): ?><tr><td colspan="9" class="text-center text-muted py-3">No customer data for this period</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

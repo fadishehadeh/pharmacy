@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Expenses';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -103,7 +103,6 @@ $totalExpenses = array_sum(array_column($expenses, 'amount'));
                             <td><a href="?month=<?= $month ?>&delete=<?= $exp['id'] ?>" class="btn btn-sm btn-outline-danger" data-confirm="Delete?"><i class="bi bi-trash"></i></a></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($expenses)): ?><tr><td colspan="6" class="text-center text-muted py-3">No expenses this month</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

@@ -9,11 +9,14 @@ $(document).ready(function() {
     });
 
     if ($.fn.DataTable) {
-        $('.data-table').DataTable({
-            pageLength: 25,
-            responsive: true,
-            language: { search: "", searchPlaceholder: "Search..." },
-            dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip'
+        $('.data-table').each(function() {
+            if (!$.fn.DataTable.isDataTable(this)) {
+                $(this).DataTable({
+                    pageLength: 25,
+                    language: { search: "", searchPlaceholder: "Search...", emptyTable: "No records found" },
+                    dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip'
+                });
+            }
         });
     }
 

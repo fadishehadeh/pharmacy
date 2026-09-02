@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Settings';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -6,7 +6,13 @@ if (!hasRole('admin')) { header('Location: ' . BASE_URL); exit; }
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['save_general'])) {
+    if (isset($_POST['save_seo'])) {
+        foreach (['ga_measurement_id','gsc_verification_code'] as $key) {
+            updateSetting($key, trim($_POST[$key] ?? ''));
+        }
+        flashMessage('SEO & Analytics settings saved');
+        header('Location: index.php#seo'); exit;
+    } elseif (isset($_POST['save_general'])) {
         $keys = ['pharmacy_name','pharmacy_name_ar','pharmacy_address','pharmacy_phone','pharmacy_email',
                  'pharmacy_license','pharmacist_name','pharmacist_license','exchange_rate','vat_rate',
                  'receipt_header','receipt_footer','low_stock_threshold','expiry_alert_days'];
@@ -58,6 +64,7 @@ $auditLogs = $db->query("SELECT al.*, u.username FROM audit_log al LEFT JOIN use
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#users">Users</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#receipt">Receipt</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#audit">Audit Log</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#seo">SEO &amp; Analytics</a></li>
     <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/modules/settings/activity.php">User Activity</a></li>
     <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/modules/settings/backup.php">Database Backup</a></li>
 </ul>
@@ -226,11 +233,64 @@ $auditLogs = $db->query("SELECT al.*, u.username FROM audit_log al LEFT JOIN use
                             <td><small><?= sanitize($log['ip_address']) ?></small></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($auditLogs)): ?><tr><td colspan="6" class="text-center text-muted py-3">No audit logs yet</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
+
+    <!-- SEO & Analytics tab -->
+    <div class="tab-pane fade" id="seo">
+        <form method="POST">
+        <div class="card mb-3">
+            <div class="card-header fw-semibold"><i class="bi bi-graph-up-arrow me-2"></i>Google Analytics 4</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Measurement ID <small class="text-muted">(e.g. G-XXXXXXXXXX)</small></label>
+                    <input type="text" class="form-control font-monospace" name="ga_measurement_id"
+                           value="<?= htmlspecialchars(getSetting('ga_measurement_id',''), ENT_QUOTES) ?>"
+                           placeholder="G-XXXXXXXXXX">
+                    <div class="form-text">Found in Google Analytics &rsaquo; Admin &rsaquo; Data Streams &rsaquo; your stream &rsaquo; Measurement ID.</div>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-header fw-semibold"><i class="bi bi-search me-2"></i>Google Search Console</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">HTML meta tag verification code <small class="text-muted">(only the content="..." value)</small></label>
+                    <input type="text" class="form-control font-monospace" name="gsc_verification_code"
+                           value="<?= htmlspecialchars(getSetting('gsc_verification_code',''), ENT_QUOTES) ?>"
+                           placeholder="abc123xyz...">
+                    <div class="form-text">In Search Console &rsaquo; Add property &rsaquo; HTML tag method &rsaquo; copy only the <code>content</code> value, not the full tag.</div>
+                </div>
+                <?php if (getSetting('gsc_verification_code','')): ?>
+                <div class="alert alert-info py-2 small">
+                    <strong>Verification tag active on landing page:</strong><br>
+                    <code>&lt;meta name="google-site-verification" content="<?= htmlspecialchars(getSetting('gsc_verification_code',''), ENT_QUOTES) ?>"&gt;</code>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php if (getSetting('ga_measurement_id','')): ?>
+        <div class="card mb-3">
+            <div class="card-header fw-semibold"><i class="bi bi-check-circle-fill text-success me-2"></i>Status</div>
+            <div class="card-body">
+                <div class="d-flex gap-3 flex-wrap">
+                    <span class="badge bg-success fs-6 fw-normal py-2 px-3">
+                        <i class="bi bi-graph-up me-1"></i>GA4 active: <?= htmlspecialchars(getSetting('ga_measurement_id',''), ENT_QUOTES) ?>
+                    </span>
+                    <?php if (getSetting('gsc_verification_code','')): ?>
+                    <span class="badge bg-primary fs-6 fw-normal py-2 px-3">
+                        <i class="bi bi-search me-1"></i>GSC verification set
+                    </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        <button type="submit" name="save_seo" value="1" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save SEO Settings</button>
+        </form>
     </div>
 </div>
 

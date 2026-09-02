@@ -58,7 +58,7 @@ $totals = $totals->fetch();
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
-            <thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th><th>Items</th><th class="text-end">Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th><th>Items</th><th class="text-end">Total</th><th>Status</th><th></th></tr></thead>
             <tbody>
                 <?php foreach ($result['data'] as $sale): ?>
                 <?php $itemCount = $db->prepare("SELECT COUNT(*) FROM sale_items WHERE sale_id = ?"); $itemCount->execute([$sale['id']]); ?>
@@ -70,9 +70,17 @@ $totals = $totals->fetch();
                     <td><?= $itemCount->fetchColumn() ?></td>
                     <td class="text-end fw-semibold"><?= formatCurrency($sale['total_amount'], $sale['currency']) ?></td>
                     <td><span class="badge bg-<?= $sale['status'] === 'completed' ? 'success' : ($sale['status'] === 'cancelled' ? 'danger' : 'warning') ?>"><?= ucfirst($sale['status']) ?></span></td>
+                    <td>
+                        <?php if ($sale['payment_method'] === 'insurance'): ?>
+                        <a href="<?= BASE_URL ?>/modules/insurance/claim_form.php?sale_id=<?= $sale['id'] ?>"
+                            class="btn btn-xs btn-outline-primary btn-sm" title="Generate Insurance Claim">
+                            <i class="bi bi-file-medical"></i> Claim
+                        </a>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($result['data'])): ?><tr><td colspan="7" class="text-center text-muted py-3">No sales found</td></tr><?php endif; ?>
+                <?php if (empty($result['data'])): ?><tr><td colspan="8" class="text-center text-muted py-3">No sales found</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

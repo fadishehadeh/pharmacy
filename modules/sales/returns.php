@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Returns';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -70,7 +70,6 @@ $returns = $db->query("SELECT sr.*, si.unit_price, m.name as medicine_name, s.in
                             <td><small><?= sanitize($r['reason'] ?? '') ?></small></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($returns)): ?><tr><td colspan="6" class="text-center text-muted py-3">No returns</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

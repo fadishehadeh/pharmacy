@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Near-Expiry Deals';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -222,7 +222,6 @@ foreach ($activePromos as $ap) {
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($activePromos)): ?><tr><td colspan="9" class="text-center text-muted py-3">No active promotions</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -287,7 +286,6 @@ foreach ($activePromos as $ap) {
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($nearExpiry)): ?><tr><td colspan="9" class="text-center text-muted py-3">No near-expiry items found</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

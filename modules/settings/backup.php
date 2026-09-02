@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Database Backup';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -146,7 +146,6 @@ foreach ($tables as $t) {
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($backups)): ?><tr><td colspan="4" class="text-center text-muted py-3">No backups yet</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

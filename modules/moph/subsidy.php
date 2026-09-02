@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Subsidy Tracking';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $subsidizedMeds = $db->query("SELECT m.*, c.name as category_name FROM medicines m LEFT JOIN categories c ON m.category_id = c.id WHERE m.is_subsidized = 1 AND m.is_active = 1 ORDER BY m.name")->fetchAll();
@@ -81,7 +82,6 @@ $totalSubsidySales = array_sum(array_column($subsidySales, 'total_price'));
                             <td class="text-success"><?= formatCurrency($ss['subsidy_amount']) ?></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($subsidySales)): ?><tr><td colspan="6" class="text-center text-muted py-3">No subsidized sales this period</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

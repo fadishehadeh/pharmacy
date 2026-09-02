@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Supplier Analytics';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = floatval(getSetting('exchange_rate', '89500'));
@@ -279,7 +280,6 @@ $reliableSuppliers = array_slice($reliableSuppliers, 0, 5);
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($scorecard)): ?><tr><td colspan="9" class="text-center text-muted py-3">No supplier data for this period</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -334,7 +334,6 @@ $reliableSuppliers = array_slice($reliableSuppliers, 0, 5);
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($recentOrders)): ?><tr><td colspan="8" class="text-center text-muted py-3">No purchase orders for this period</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Prescriptions';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -123,7 +123,6 @@ $stats = [
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($prescriptions)): ?><tr><td colspan="7" class="text-center text-muted py-3">No prescriptions found</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

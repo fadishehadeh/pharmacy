@@ -8,5 +8,5 @@ if (isset($_SESSION['login_log_id'])) {
     } catch (Exception $e) {}
 }
 session_destroy();
-header('Location: /pharmacy/login.php');
+header('Location: /login.php');
 exit;

@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Insurance Claims';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -114,7 +115,6 @@ foreach ($stats as $s) {
                     </form>
                 </div></div></div>
                 <?php endforeach; ?>
-                <?php if (empty($claims)): ?><tr><td colspan="9" class="text-center text-muted py-3">No claims found</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

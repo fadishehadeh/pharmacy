@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Daily Summary';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = floatval(getSetting('exchange_rate', '89500'));

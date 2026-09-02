@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Pharmacy Profile';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('admin')) { flashMessage('Access denied. Administrator role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = getSetting('exchange_rate', '89500');

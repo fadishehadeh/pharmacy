@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Financial Overview';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $month = $_GET['month'] ?? date('Y-m');
@@ -34,6 +35,12 @@ $expenseCategories = $db->prepare("SELECT category, SUM(amount) as total FROM ex
 $expenseCategories->execute([$month]);
 $expenseCategories = $expenseCategories->fetchAll();
 ?>
+
+<div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+    <a href="<?= BASE_URL ?>/modules/finance/eod_reconciliation.php" class="btn btn-success">
+        <i class="bi bi-cash-stack me-1"></i> End-of-Day Reconciliation
+    </a>
+</div>
 
 <div class="card p-3 mb-3">
     <form method="GET" class="row g-2 align-items-center">

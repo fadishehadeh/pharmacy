@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Deliveries';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -110,7 +111,6 @@ $recentSales = $db->query("SELECT s.id, s.invoice_number, s.total_amount, c.name
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($deliveries)): ?><tr><td colspan="9" class="text-center text-muted py-3">No deliveries found</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

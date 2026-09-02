@@ -9,6 +9,7 @@ $search = $_GET['search'] ?? '';
 $category = $_GET['category'] ?? '';
 $stockFilter = $_GET['stock'] ?? '';
 $shelf = $_GET['shelf'] ?? '';
+$controlledFilter = $_GET['controlled'] ?? '';
 
 $where = ['m.is_active = 1'];
 $params = [];
@@ -33,6 +34,11 @@ if ($stockFilter === 'low') {
 if ($shelf) {
     $where[] = 'm.shelf_id = ?';
     $params[] = $shelf;
+}
+if ($controlledFilter === '1') {
+    $where[] = 'm.is_controlled = 1';
+} elseif ($controlledFilter === '0') {
+    $where[] = 'm.is_controlled = 0';
 }
 
 $whereStr = implode(' AND ', $where);
@@ -97,7 +103,16 @@ if (isset($_GET['delete']) && hasRole('admin')) {
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <select class="form-select" name="controlled">
+                <option value="">All Types</option>
+                <option value="1" <?= $controlledFilter === '1' ? 'selected' : '' ?>>
+                    <i class="bi bi-shield-lock"></i> Controlled Only
+                </option>
+                <option value="0" <?= $controlledFilter === '0' ? 'selected' : '' ?>>Non-Controlled</option>
+            </select>
+        </div>
+        <div class="col-md-2">
             <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search me-1"></i>Filter</button>
             <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-outline-secondary">Clear</a>
         </div>
@@ -135,6 +150,7 @@ if (isset($_GET['delete']) && hasRole('admin')) {
                 <tr class="<?= $isExpired ? 'table-danger' : '' ?>">
                     <td>
                         <strong><?= sanitize($med['name']) ?></strong>
+                        <?php if (!empty($med['is_controlled'])): ?><span class="badge bg-danger ms-1 small" title="Controlled Substance"><i class="bi bi-shield-lock"></i></span><?php endif; ?>
                         <?php if ($med['strength']): ?><br><small class="text-muted"><?= sanitize($med['strength']) ?> - <?= ucfirst($med['form']) ?></small><?php endif; ?>
                         <?php if ($med['generic_name']): ?><br><small class="text-muted fst-italic"><?= sanitize($med['generic_name']) ?></small><?php endif; ?>
                     </td>

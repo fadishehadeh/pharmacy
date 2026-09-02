@@ -1,7 +1,25 @@
 <?php
-$pageTitle = 'Dashboard';
-require_once __DIR__ . '/includes/header.php';
-requireLogin();
+require_once __DIR__ . '/config/app.php';
+
+if (isLoggedIn()) {
+    header('Location: ' . BASE_URL . '/modules/pos/index.php');
+    exit;
+}
+?><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmaPro: Pharmacy Software for Lebanon</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-T7T78L7W89"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T7T78L7W89');</script>
+<meta http-equiv="refresh" content="0;url=/landing.php">
+</head>
+<body>
+<script>window.location.replace('/landing.php');</script>
+</body>
+</html>
+<?php exit;
 
 $db = getDB();
 $user = currentUser();
@@ -284,9 +302,9 @@ $totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($
         <div class="card kpi-card border-accent-green">
             <i class="bi bi-cash-stack kpi-icon"></i>
             <div class="kpi-label">Today's Revenue</div>
-            <div class="kpi-value"><?= formatCurrency($todaySales) ?></div>
-            <div class="kpi-sub"><?= number_format($todaySales * $exchangeRate, 0, '.', ',') ?> L.L.</div>
-            <div class="kpi-sub">Profit: <?= formatCurrency($todayProfit) ?></div>
+            <div class="kpi-value" data-count="<?= $todaySales ?>" data-prefix="$" data-decimals="2">$0.00</div>
+            <div class="kpi-sub"><span data-count="<?= round($todaySales * $exchangeRate) ?>" data-suffix=" L.L.">0 L.L.</span></div>
+            <div class="kpi-sub">Profit: $<span data-count="<?= $todayProfit ?>" data-decimals="2">0.00</span></div>
         </div>
     </div>
     <!-- Today's Transactions -->
@@ -294,7 +312,7 @@ $totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($
         <div class="card kpi-card border-accent-blue">
             <i class="bi bi-receipt kpi-icon"></i>
             <div class="kpi-label">Transactions</div>
-            <div class="kpi-value"><?= number_format($todayTransactions) ?></div>
+            <div class="kpi-value" data-count="<?= $todayTransactions ?>"><?= number_format($todayTransactions) ?></div>
             <div class="kpi-sub">Today's completed sales</div>
         </div>
     </div>
@@ -303,7 +321,7 @@ $totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($
         <div class="card kpi-card border-accent-amber">
             <i class="bi bi-exclamation-triangle kpi-icon"></i>
             <div class="kpi-label">Low Stock</div>
-            <div class="kpi-value"><?= number_format($lowStockCount + $outOfStock) ?></div>
+            <div class="kpi-value" data-count="<?= $lowStockCount + $outOfStock ?>"><?= number_format($lowStockCount + $outOfStock) ?></div>
             <div class="kpi-sub"><?= $outOfStock ?> out of stock</div>
             <div class="kpi-link"><a href="<?= BASE_URL ?>/modules/inventory/alerts.php">View alerts &rarr;</a></div>
         </div>
@@ -313,7 +331,7 @@ $totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($
         <div class="card kpi-card border-accent-red">
             <i class="bi bi-clock-history kpi-icon"></i>
             <div class="kpi-label">Expiring Soon</div>
-            <div class="kpi-value"><?= number_format($expiringCount) ?></div>
+            <div class="kpi-value" data-count="<?= $expiringCount ?>"><?= number_format($expiringCount) ?></div>
             <div class="kpi-sub"><?= $expiredCount ?> already expired</div>
             <div class="kpi-link"><a href="<?= BASE_URL ?>/modules/inventory/alerts.php" class="text-danger">View expiry alerts &rarr;</a></div>
         </div>
@@ -323,7 +341,7 @@ $totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($
         <div class="card kpi-card border-accent-purple">
             <i class="bi bi-box-seam kpi-icon"></i>
             <div class="kpi-label">Pending Orders</div>
-            <div class="kpi-value"><?= number_format($pendingOrders) ?></div>
+            <div class="kpi-value" data-count="<?= $pendingOrders ?>"><?= number_format($pendingOrders) ?></div>
             <div class="kpi-sub">Purchase orders open</div>
             <div class="kpi-link"><a href="<?= BASE_URL ?>/modules/suppliers/index.php">View orders &rarr;</a></div>
         </div>
@@ -333,7 +351,7 @@ $totalAlerts = $expiredCount + $outOfStock + count($pendingDeliveries) + count($
         <div class="card kpi-card border-accent-cyan">
             <i class="bi bi-people kpi-icon"></i>
             <div class="kpi-label">Customers Today</div>
-            <div class="kpi-value"><?= number_format($activeCustomersToday) ?></div>
+            <div class="kpi-value" data-count="<?= $activeCustomersToday ?>"><?= number_format($activeCustomersToday) ?></div>
             <div class="kpi-sub">Unique customers served</div>
         </div>
     </div>
@@ -605,6 +623,26 @@ foreach ($revenueByCategory as $i => $rc) {
 }
 
 $extraScripts = "<script>
+// Animated counters for KPI values
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-count]').forEach(function (el) {
+        var target = parseFloat(el.dataset.count);
+        var prefix = el.dataset.prefix || '';
+        var suffix = el.dataset.suffix || '';
+        var decimals = el.dataset.decimals ? parseInt(el.dataset.decimals) : 0;
+        var duration = 700;
+        var start = performance.now();
+        function step(now) {
+            var progress = Math.min((now - start) / duration, 1);
+            var ease = 1 - Math.pow(1 - progress, 3);
+            var val = target * ease;
+            el.textContent = prefix + (decimals > 0 ? val.toFixed(decimals) : Math.round(val).toLocaleString()) + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    });
+});
+
 // Live clock
 setInterval(function(){
     var now = new Date();

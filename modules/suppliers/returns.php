@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Supplier Returns';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -172,7 +172,6 @@ $medicines = $db->query("SELECT id, name, quantity_in_stock, batch_number, cost_
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($returns)): ?><tr><td colspan="10" class="text-center text-muted py-3">No supplier returns recorded</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

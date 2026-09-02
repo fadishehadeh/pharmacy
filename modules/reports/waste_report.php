@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Waste Report';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = floatval(getSetting('exchange_rate', '89500'));
@@ -328,7 +329,6 @@ if (empty($recommendations)) {
                             <td><small><?= ucfirst(str_replace('_', ' ', sanitize($d['disposal_method']))) ?></small></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($details)): ?><tr><td colspan="7" class="text-center text-muted py-3">No disposal records in this period</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

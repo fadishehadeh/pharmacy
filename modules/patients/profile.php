@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Patient Profile';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -173,7 +173,6 @@ $age = $patient['date_of_birth'] ? floor((time() - strtotime($patient['date_of_b
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($activeMeds)): ?><tr><td colspan="6" class="text-center text-muted py-3">No active medications</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -194,7 +193,6 @@ $age = $patient['date_of_birth'] ? floor((time() - strtotime($patient['date_of_b
                             <td><?= formatCurrency($ph['total_amount']) ?></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($purchaseHistory)): ?><tr><td colspan="5" class="text-center text-muted py-3">No purchase history</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

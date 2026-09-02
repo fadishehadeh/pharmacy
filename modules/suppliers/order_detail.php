@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Purchase Order Details';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $id = intval($_GET['id'] ?? 0);
@@ -76,7 +77,6 @@ $medicines = $db->query("SELECT id, name, strength, cost_price FROM medicines WH
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($items)): ?><tr><td colspan="6" class="text-center text-muted py-3">No items added yet</td></tr><?php endif; ?>
                     </tbody>
                     <tfoot>
                         <tr class="table-primary"><td colspan="4" class="text-end fw-bold">Total:</td><td class="text-end fw-bold"><?= formatCurrency($po['total']) ?></td><td></td></tr>

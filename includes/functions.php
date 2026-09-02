@@ -1,4 +1,31 @@
 <?php
+
+// ── Language / i18n ──────────────────────────────────────────────────────────
+function initLang() {
+    if (!session_id()) session_start();
+    if (isset($_GET['setlang']) && in_array($_GET['setlang'], ['en', 'ar'])) {
+        $_SESSION['lang'] = $_GET['setlang'];
+    }
+    $lang = $_SESSION['lang'] ?? 'en';
+    $file = __DIR__ . '/../lang/' . $lang . '.php';
+    $GLOBALS['_lang']     = file_exists($file) ? require $file : [];
+    $GLOBALS['_lang_code'] = $lang;
+    $GLOBALS['_is_rtl']   = ($lang === 'ar');
+}
+
+function t(string $key, string $fallback = ''): string {
+    $s = $GLOBALS['_lang'][$key] ?? ($fallback ?: $key);
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+}
+
+function tr(string $key, string $fallback = ''): string {
+    return $GLOBALS['_lang'][$key] ?? ($fallback ?: $key);
+}
+
+function isRtl(): bool { return $GLOBALS['_is_rtl'] ?? false; }
+function langCode(): string { return $GLOBALS['_lang_code'] ?? 'en'; }
+// ────────────────────────────────────────────────────────────────────────────
+
 function sanitize($input) {
     if (is_array($input)) {
         return array_map('sanitize', $input);
@@ -18,28 +45,28 @@ function formatDate($date, $format = 'Y-m-d') {
     return date($format, strtotime($date));
 }
 
-function generateInvoiceNumber() {
+function _nextSeq($seqKey) {
+    // Atomically increment a named counter stored in the settings table.
+    // Uses MySQL's LAST_INSERT_ID(expr) trick — safe under concurrent requests.
     $db = getDB();
-    $stmt = $db->query("SELECT MAX(id) as max_id FROM sales");
-    $row = $stmt->fetch();
-    $next = ($row['max_id'] ?? 0) + 1;
-    return 'INV-' . date('Ymd') . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+    $db->prepare(
+        "INSERT INTO settings (setting_key, setting_value) VALUES (?, 1)
+         ON DUPLICATE KEY UPDATE setting_value = LAST_INSERT_ID(setting_value + 1)"
+    )->execute([$seqKey]);
+    $seq = (int)$db->query("SELECT LAST_INSERT_ID()")->fetchColumn();
+    return $seq ?: 1;
+}
+
+function generateInvoiceNumber() {
+    return 'INV-' . date('Ymd') . '-' . str_pad(_nextSeq('_seq_invoice'), 4, '0', STR_PAD_LEFT);
 }
 
 function generatePONumber() {
-    $db = getDB();
-    $stmt = $db->query("SELECT MAX(id) as max_id FROM purchase_orders");
-    $row = $stmt->fetch();
-    $next = ($row['max_id'] ?? 0) + 1;
-    return 'PO-' . date('Ymd') . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+    return 'PO-' . date('Ymd') . '-' . str_pad(_nextSeq('_seq_po'), 4, '0', STR_PAD_LEFT);
 }
 
 function generateClaimNumber() {
-    $db = getDB();
-    $stmt = $db->query("SELECT MAX(id) as max_id FROM insurance_claims");
-    $row = $stmt->fetch();
-    $next = ($row['max_id'] ?? 0) + 1;
-    return 'CLM-' . date('Ymd') . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+    return 'CLM-' . date('Ymd') . '-' . str_pad(_nextSeq('_seq_claim'), 4, '0', STR_PAD_LEFT);
 }
 
 function getExpiringMedicines($days = 90) {
@@ -109,16 +136,15 @@ function getFlashMessage() {
 
 function paginate($query, $params, $page, $perPage = 20) {
     $db = getDB();
-    $countQuery = preg_replace('/SELECT .+? FROM/i', 'SELECT COUNT(*) as total FROM', $query, 1);
-    $countQuery = preg_replace('/ORDER BY .+$/i', '', $countQuery);
-    $countQuery = preg_replace('/LIMIT .+$/i', '', $countQuery);
+    // Wrap in a subquery so the count survives GROUP BY, subqueries in SELECT, CTEs, etc.
+    $stripped = preg_replace('/\s+ORDER\s+BY\s+.+$/is', '', $query);
+    $countQuery = "SELECT COUNT(*) as total FROM ($stripped) AS _pag_sub";
     $stmt = $db->prepare($countQuery);
     $stmt->execute($params);
-    $total = $stmt->fetch()['total'];
+    $total = (int)$stmt->fetch()['total'];
 
     $offset = ($page - 1) * $perPage;
-    $query .= " LIMIT $perPage OFFSET $offset";
-    $stmt = $db->prepare($query);
+    $stmt = $db->prepare($query . " LIMIT $perPage OFFSET $offset");
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
 
@@ -127,17 +153,34 @@ function paginate($query, $params, $page, $perPage = 20) {
         'total' => $total,
         'page' => $page,
         'per_page' => $perPage,
-        'total_pages' => ceil($total / $perPage),
+        'total_pages' => (int)ceil($total / $perPage),
     ];
 }
 
 function renderPagination($pagination, $baseUrl) {
     if ($pagination['total_pages'] <= 1) return '';
+    $safeUrl = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8');
+    $sep = strpos($baseUrl, '?') !== false ? '&amp;' : '?';
+    $current = (int)$pagination['page'];
+    $total   = (int)$pagination['total_pages'];
+
+    // Build the sparse set of page numbers to show: first, last, current±2.
+    $show = [];
+    for ($i = 1; $i <= $total; $i++) {
+        if ($i === 1 || $i === $total || abs($i - $current) <= 2) {
+            $show[$i] = true;
+        }
+    }
+
     $html = '<nav><ul class="pagination justify-content-center">';
-    $sep = strpos($baseUrl, '?') !== false ? '&' : '?';
-    for ($i = 1; $i <= $pagination['total_pages']; $i++) {
-        $active = $i == $pagination['page'] ? ' active' : '';
-        $html .= "<li class='page-item$active'><a class='page-link' href='{$baseUrl}{$sep}page=$i'>$i</a></li>";
+    $prev = 0;
+    foreach ($show as $i => $_) {
+        if ($prev && $i - $prev > 1) {
+            $html .= "<li class='page-item disabled'><span class='page-link'>&hellip;</span></li>";
+        }
+        $active = $i === $current ? ' active' : '';
+        $html .= "<li class='page-item$active'><a class='page-link' href='{$safeUrl}{$sep}page=$i'>$i</a></li>";
+        $prev = $i;
     }
     $html .= '</ul></nav>';
     return $html;

@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Sales Analytics';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = floatval(getSetting('exchange_rate', '89500'));
@@ -325,7 +326,6 @@ $cashierData = $cashierData->fetchAll();
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($topMedicines)): ?><tr><td colspan="7" class="text-center text-muted py-3">No sales data for this period</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -353,7 +353,6 @@ $cashierData = $cashierData->fetchAll();
                             <td class="text-end"><small class="text-muted"><?= formatCurrency($c['revenue'] * $exchangeRate, 'LBP') ?></small></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($cashierData)): ?><tr><td colspan="4" class="text-center text-muted py-3">No data</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Price History';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = getSetting('exchange_rate', '89500');
@@ -169,7 +170,6 @@ $allMedicines = $db->query("SELECT id, name FROM medicines WHERE is_active = 1 O
                             <td><small><?= sanitize($h['changed_by_name'] ?? '-') ?></small></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($history)): ?><tr><td colspan="8" class="text-center text-muted py-3">No price changes recorded</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -205,7 +205,6 @@ $allMedicines = $db->query("SELECT id, name FROM medicines WHERE is_active = 1 O
                             <td class="no-print"><a href="?medicine_id=<?= $mc['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($mostChanges)): ?><tr><td colspan="6" class="text-center text-muted py-3">No price history data</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -273,7 +272,6 @@ $allMedicines = $db->query("SELECT id, name FROM medicines WHERE is_active = 1 O
                     <td class="no-print"><a href="?medicine_id=<?= $rc['medicine_id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($recentChanges)): ?><tr><td colspan="9" class="text-center text-muted py-3">No price changes recorded</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

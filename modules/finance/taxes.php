@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Tax Management';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $vatRate = floatval(getSetting('vat_rate', 11));
@@ -64,7 +65,6 @@ $records = $db->query("SELECT * FROM tax_records ORDER BY period_start DESC")->f
                             <td><span class="badge bg-<?= $r['status'] === 'paid' ? 'success' : ($r['status'] === 'filed' ? 'primary' : 'warning') ?>"><?= ucfirst($r['status']) ?></span></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($records)): ?><tr><td colspan="6" class="text-center text-muted py-3">No tax records</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

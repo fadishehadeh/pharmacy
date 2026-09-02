@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Medicine Alternatives';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -92,7 +93,6 @@ $medicines = $db->query("SELECT id, name, generic_name, sell_price, manufacturer
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($alternatives)): ?><tr><td colspan="6" class="text-center text-muted py-3">No alternatives linked yet</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

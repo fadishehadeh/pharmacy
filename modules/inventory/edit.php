@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Edit Medicine';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 
 $db = getDB();
 $id = intval($_GET['id'] ?? 0);
@@ -35,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $expiryDate = $_POST['expiry_date'] ?: null;
     $mophPrice = $_POST['moph_price'] ?: null;
 
-    $stmt = $db->prepare("UPDATE medicines SET barcode=?, name=?, name_ar=?, generic_name=?, strength=?, form=?, category_id=?, shelf_id=?, manufacturer=?, country_of_origin=?, requires_prescription=?, is_controlled=?, controlled_schedule=?, is_subsidized=?, subsidy_percentage=?, unit=?, units_per_box=?, cost_price=?, sell_price=?, moph_price=?, min_stock_level=?, max_stock_level=?, expiry_date=?, batch_number=?, storage_conditions=?, notes=? WHERE id=?");
+    $stmt = $db->prepare("UPDATE medicines SET barcode=?, name=?, name_ar=?, generic_name=?, strength=?, form=?, category_id=?, shelf_id=?, manufacturer=?, country_of_origin=?, requires_prescription=?, is_controlled=?, controlled_schedule=?, controlled_category=?, is_subsidized=?, subsidy_percentage=?, unit=?, units_per_box=?, cost_price=?, sell_price=?, moph_price=?, min_stock_level=?, max_stock_level=?, expiry_date=?, batch_number=?, storage_conditions=?, notes=? WHERE id=?");
 
     $stmt->execute([
         $_POST['barcode'] ?: null,
@@ -51,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         isset($_POST['requires_prescription']) ? 1 : 0,
         isset($_POST['is_controlled']) ? 1 : 0,
         $_POST['controlled_schedule'] ?: null,
+        $_POST['controlled_category'] ?: null,
         isset($_POST['is_subsidized']) ? 1 : 0,
         $_POST['subsidy_percentage'] ?: 0,
         $_POST['unit'] ?: 'box',
@@ -193,12 +195,21 @@ $movements = $movements->fetchAll();
                     <div class="col-md-3">
                         <div class="form-check"><input type="checkbox" class="form-check-input" name="requires_prescription" <?= $med['requires_prescription'] ? 'checked' : '' ?>><label class="form-check-label">Prescription</label></div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-check"><input type="checkbox" class="form-check-input" name="is_controlled" <?= $med['is_controlled'] ? 'checked' : '' ?>><label class="form-check-label">Controlled</label></div>
+                    <div class="col-md-2">
+                        <div class="form-check mt-4"><input type="checkbox" class="form-check-input" id="chkControlled" name="is_controlled" <?= $med['is_controlled'] ? 'checked' : '' ?>><label class="form-check-label" for="chkControlled"><i class="bi bi-shield-lock text-danger me-1"></i>Controlled</label></div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Schedule</label>
                         <input type="text" class="form-control" name="controlled_schedule" value="<?= sanitize($med['controlled_schedule'] ?? '') ?>">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Controlled Category</label>
+                        <select class="form-select" name="controlled_category">
+                            <option value="">— None —</option>
+                            <?php foreach (['narcotic','psychotropic','precursor','other'] as $cc): ?>
+                            <option value="<?= $cc ?>" <?= ($med['controlled_category'] ?? '') === $cc ? 'selected' : '' ?>><?= ucfirst($cc) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="col-md-3">
                         <div class="form-check"><input type="checkbox" class="form-check-input" name="is_subsidized" <?= $med['is_subsidized'] ? 'checked' : '' ?>><label class="form-check-label">Subsidized</label></div>

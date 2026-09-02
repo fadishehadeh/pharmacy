@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Expiry Calendar';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 // Calendar navigation
@@ -259,7 +260,6 @@ if ($view === 'list') {
                             <td><span class="badge bg-<?= $statusBg ?>"><?= $statusLabel ?></span></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($listData)): ?><tr><td colspan="8" class="text-center text-muted py-3">No expiring medicines in this period</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

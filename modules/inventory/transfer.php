@@ -64,7 +64,6 @@ $shelves = $db->query("SELECT s.id, s.shelf_number, c.name as cabinet_name FROM 
                     <td><small><?= sanitize($t['user_name'] ?? '-') ?></small></td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($transfers)): ?><tr><td colspan="7" class="text-center text-muted py-3">No transfers recorded</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

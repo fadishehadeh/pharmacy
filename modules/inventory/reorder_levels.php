@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Reorder Levels';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -252,7 +252,6 @@ $overstocked = count(array_filter($enriched, fn($m) => $m['status'] === 'over'))
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                <?php if (empty($enriched)): ?><tr><td colspan="10" class="text-center text-muted py-3">No medicines found</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

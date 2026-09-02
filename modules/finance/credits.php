@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $pageTitle = 'Customer Credits';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
@@ -145,7 +145,6 @@ if ($detailCustomerId > 0) {
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($customers)): ?><tr><td colspan="7" class="text-center text-muted py-3">No customer credits found</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -190,7 +189,6 @@ if ($detailCustomerId > 0) {
                             <td><small><?= sanitize($tx['created_by_name'] ?? '-') ?></small></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($transactions)): ?><tr><td colspan="5" class="text-center text-muted py-3">No transactions</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

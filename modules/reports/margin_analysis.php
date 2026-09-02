@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Margin Analysis';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $exchangeRate = getSetting('exchange_rate', '89500');
@@ -173,7 +174,6 @@ if ($filterMargin === 'low') {
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($medicines)): ?><tr><td colspan="8" class="text-center text-muted py-3">No medicines found</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

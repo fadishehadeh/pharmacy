@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Stock & Expiry Alerts';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 
 $expired = getExpiredMedicines();
 $expiring = getExpiringMedicines(90);
@@ -32,7 +33,6 @@ $outOfStock = getOutOfStockMedicines();
                             <td><a href="edit.php?id=<?= $med['id'] ?>" class="btn btn-sm btn-outline-primary">Manage</a></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($expired)): ?><tr><td colspan="5" class="text-center text-muted py-3">No expired medicines</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -55,7 +55,6 @@ $outOfStock = getOutOfStockMedicines();
                             <td><a href="edit.php?id=<?= $med['id'] ?>" class="btn btn-sm btn-outline-primary">Manage</a></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($expiring)): ?><tr><td colspan="5" class="text-center text-muted py-3">No medicines expiring in the next 90 days</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -97,7 +96,6 @@ $outOfStock = getOutOfStockMedicines();
                             <td><a href="edit.php?id=<?= $med['id'] ?>" class="btn btn-sm btn-outline-primary">Restock</a></td>
                         </tr>
                         <?php endforeach; ?>
-                        <?php if (empty($outOfStock)): ?><tr><td colspan="4" class="text-center text-muted py-3">No out of stock items</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

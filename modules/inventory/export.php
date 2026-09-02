@@ -1,6 +1,7 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../config/app.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $medicines = $db->query("SELECT m.*, c.name as category_name, s.shelf_number, cab.name as cabinet_name FROM medicines m LEFT JOIN categories c ON m.category_id = c.id LEFT JOIN shelves s ON m.shelf_id = s.id LEFT JOIN cabinets cab ON s.cabinet_id = cab.id WHERE m.is_active = 1 ORDER BY m.name")->fetchAll();

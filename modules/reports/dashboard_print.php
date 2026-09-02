@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 $pageTitle = 'Dashboard Summary';
 require_once __DIR__ . '/../../includes/header.php';
 requireLogin();
+if (!hasRole('pharmacist')) { flashMessage('Access denied. Pharmacist or Admin role required.', 'danger'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $db = getDB();
 
 $pharmacyName = getSetting('pharmacy_name', 'My Pharmacy');
