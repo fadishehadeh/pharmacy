@@ -1,4 +1,6 @@
 <?php
+header('X-LiteSpeed-Cache-Control: no-cache');
+header('Cache-Control: no-store, no-cache, must-revalidate');
 $lang = $_GET['lang'] ?? (isset($_COOKIE['lang']) ? $_COOKIE['lang'] : 'ar');
 $ar = ($lang === 'ar');
 $dir = $ar ? 'rtl' : 'ltr';
@@ -243,7 +245,7 @@ footer {
 
 <main>
   <p class="pain">
-    <?= $ar ? 'لسا بتشتغل بالورقة والقلم؟' : 'Still running your pharmacy on paper?' ?>
+    <?= $ar ? 'ليش تتعب وفي برنامج يشتغل عنك؟' : 'Why struggle when software can do it for you?' ?>
   </p>
 
   <h1 class="headline">
